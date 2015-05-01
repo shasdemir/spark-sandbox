@@ -9,7 +9,7 @@ object miniSparkTry {
         val conf = new SparkConf().setMaster("local").setAppName("Mini Spark Try")
         val sc = new SparkContext(conf)
 
-        val inputFile = "/Users/sukruhasdemir/spark-1.2.0/README.md"
+        val inputFile = "/Users/sukruhasdemir/programs/spark-1.2.0/README.md"
         val outputFile = "minitryOutput"
 
         val input = sc.textFile(inputFile)
