@@ -16,7 +16,8 @@ object miniSparkTry {
         val words = input.flatMap(_.split(" "))
         val counts = words.map((_, 1)).reduceByKey((x, y) => x + y)
 
-        counts.persist(StorageLevel.MEMORY_AND_DISK_2)
+        //counts.persist(StorageLevel.MEMORY_AND_DISK_2)
+        counts.cache()
 
         counts.saveAsTextFile(outputFile)
 
