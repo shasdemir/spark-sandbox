@@ -1,0 +1,581 @@
+{
+  "metadata" : {
+    "name" : "SparkSQL Trial",
+    "user_save_timestamp" : "1970-01-01T02:00:00.000Z",
+    "auto_save_timestamp" : "1970-01-01T02:00:00.000Z",
+    "language_info" : {
+      "name" : "scala",
+      "file_extension" : "scala",
+      "codemirror_mode" : "text/x-scala"
+    },
+    "trusted" : true,
+    "customLocalRepo" : null,
+    "customRepos" : null,
+    "customDeps" : null,
+    "customImports" : null,
+    "customSparkConf" : {
+      "spark.app.name" : "SparkSQL Notebook",
+      "spark.master" : "local[4]",
+      "spark.executor.memory" : "12G"
+    }
+  },
+  "cells" : [ {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "# SparkSQL Trial"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val sc = sparkContext",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "sc: org.apache.spark.SparkContext = org.apache.spark.SparkContext@4c5a9e5f\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "org.apache.spark.SparkContext@4c5a9e5f\n <div class='pull-right text-info'><small>292 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 2
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "import org.apache.spark.sql.SQLContext\nval sqlCtx = new org.apache.spark.sql.SQLContext(sc)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "import org.apache.spark.sql.SQLContext\nsqlCtx: org.apache.spark.sql.SQLContext = org.apache.spark.sql.SQLContext@5818806d\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "org.apache.spark.sql.SQLContext@5818806d\n <div class='pull-right text-info'><small>352 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 3
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "import sqlCtx.implicits._",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "import sqlCtx.implicits._\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>125 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 43
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val inputFile = \"/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/testweet.json\"",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "inputFile: String = /Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/testweet.json\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/testweet.json\n <div class='pull-right text-info'><small>984 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 5
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val input = sqlCtx.jsonFile(inputFile)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "input: org.apache.spark.sql.DataFrame = [contributorsIDs: array<string>, createdAt: string, currentUserRetweetId: bigint, hashtagEntities: array<string>, id: bigint, inReplyToStatusId: bigint, inReplyToUserId: bigint, isFavorited: boolean, isPossiblySensitive: boolean, isTruncated: boolean, mediaEntities: array<string>, retweetCount: bigint, source: string, text: string, urlEntities: array<string>, user: struct<createdAt:string,description:string,descriptionURLEntities:array<string>,favouritesCount:bigint,followersCount:bigint,friendsCount:bigint,id:bigint,isContributorsEnabled:boolean,isFollowRequestSent:boolean,isGeoEnabled:boolean,isProtected:boolean,isVerified:boolean,lang:string,listedCount:bigint,location:string,name:string,profileBackgroundColor:string,profileBackgroundImageUrl:s..."
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[contributorsIDs: array&lt;string&gt;, createdAt: string, currentUserRetweetId: bigint, hashtagEntities: array&lt;string&gt;, id: bigint, inReplyToStatusId: bigint, inReplyToUserId: bigint, isFavorited: boolean, isPossiblySensitive: boolean, isTruncated: boolean, mediaEntities: array&lt;string&gt;, retweetCount: bigint, source: string, text: string, urlEntities: array&lt;string&gt;, user: struct&lt;createdAt:string,description:string,descriptionURLEntities:array&lt;string&gt;,favouritesCount:bigint,followersCount:bigint,friendsCount:bigint,id:bigint,isContributorsEnabled:boolean,isFollowRequestSent:boolean,isGeoEnabled:boolean,isProtected:boolean,isVerified:boolean,lang:string,listedCount:bigint,location:string,name:string,profileBackgroundColor:string,profileBackgroundImageUrl:string,profileBackgroundImageUrlHttps:string,profileBackgroundTiled:boolean,profileBannerImageUrl:string,profileImageUrl:string,profileImageUrlHttps:string,profileLinkColor:string,profileSidebarBorderColor:string,profileSidebarFillColor:string,profileTextColor:string,profileUseBackgroundImage:boolean,screenName:string,showAllInlineMedia:boolean,statusesCount:bigint,translator:boolean,utcOffset:bigint&gt;, userMentionEntities: array&lt;string&gt;]\n <div class='pull-right text-info'><small>1 second 580 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 6
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "input.registerTempTable(\"tweets\")",
+    "outputs" : [ {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>325 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 7
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "input.cache()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res4: input.type = [contributorsIDs: array<string>, createdAt: string, currentUserRetweetId: bigint, hashtagEntities: array<string>, id: bigint, inReplyToStatusId: bigint, inReplyToUserId: bigint, isFavorited: boolean, isPossiblySensitive: boolean, isTruncated: boolean, mediaEntities: array<string>, retweetCount: bigint, source: string, text: string, urlEntities: array<string>, user: struct<createdAt:string,description:string,descriptionURLEntities:array<string>,favouritesCount:bigint,followersCount:bigint,friendsCount:bigint,id:bigint,isContributorsEnabled:boolean,isFollowRequestSent:boolean,isGeoEnabled:boolean,isProtected:boolean,isVerified:boolean,lang:string,listedCount:bigint,location:string,name:string,profileBackgroundColor:string,profileBackgroundImageUrl:string,profileBackgrou..."
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[contributorsIDs: array&lt;string&gt;, createdAt: string, currentUserRetweetId: bigint, hashtagEntities: array&lt;string&gt;, id: bigint, inReplyToStatusId: bigint, inReplyToUserId: bigint, isFavorited: boolean, isPossiblySensitive: boolean, isTruncated: boolean, mediaEntities: array&lt;string&gt;, retweetCount: bigint, source: string, text: string, urlEntities: array&lt;string&gt;, user: struct&lt;createdAt:string,description:string,descriptionURLEntities:array&lt;string&gt;,favouritesCount:bigint,followersCount:bigint,friendsCount:bigint,id:bigint,isContributorsEnabled:boolean,isFollowRequestSent:boolean,isGeoEnabled:boolean,isProtected:boolean,isVerified:boolean,lang:string,listedCount:bigint,location:string,name:string,profileBackgroundColor:string,profileBackgroundImageUrl:string,profileBackgroundImageUrlHttps:string,profileBackgroundTiled:boolean,profileBannerImageUrl:string,profileImageUrl:string,profileImageUrlHttps:string,profileLinkColor:string,profileSidebarBorderColor:string,profileSidebarFillColor:string,profileTextColor:string,profileUseBackgroundImage:boolean,screenName:string,showAllInlineMedia:boolean,statusesCount:bigint,translator:boolean,utcOffset:bigint&gt;, userMentionEntities: array&lt;string&gt;]\n <div class='pull-right text-info'><small>391 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 8
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val topTweets = sqlCtx.sql(\"SELECT text, retweetCount FROM tweets ORDER BY retweetCount LIMIT 20\")",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "topTweets: org.apache.spark.sql.DataFrame = [text: string, retweetCount: bigint]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[text: string, retweetCount: bigint]\n <div class='pull-right text-info'><small>595 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 9
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "output_stream_collapsed" : true,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val theTop = topTweets.collect()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "theTop: Array[org.apache.spark.sql.Row] = Array([Adventures With Coffee, Code, and Writing.,0])\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Lorg.apache.spark.sql.Row;@5aa7cc6d\n <div class='pull-right text-info'><small>905 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 10
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "theTop(0)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res5: org.apache.spark.sql.Row = [Adventures With Coffee, Code, and Writing.,0]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Adventures With Coffee, Code, and Writing.,0]\n <div class='pull-right text-info'><small>266 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 11
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val topTweetText = topTweets.map(_.getString(0))",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "topTweetText: org.apache.spark.rdd.RDD[String] = MapPartitionsRDD[17] at map at DataFrame.scala:776\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "MapPartitionsRDD[17] at map at DataFrame.scala:776\n <div class='pull-right text-info'><small>330 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 12
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "topTweetText.collect()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res6: Array[String] = Array(Adventures With Coffee, Code, and Writing.)\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Ljava.lang.String;@4de27541\n <div class='pull-right text-info'><small>258 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 13
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "theTop(0)(0)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res7: Any = Adventures With Coffee, Code, and Writing.\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "Adventures With Coffee, Code, and Writing.\n <div class='pull-right text-info'><small>244 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 14
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "sqlCtx.cacheTable(\"tweets\")",
+    "outputs" : [ {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>318 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 15
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val newJsonFile = \"/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/somedata.json\"",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "newJsonFile: String = /Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/somedata.json\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/somedata.json\n <div class='pull-right text-info'><small>303 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 16
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val newData = sqlCtx.jsonFile(newJsonFile)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "newData: org.apache.spark.sql.DataFrame = [knows: struct<friends:array<string>>, lovePandas: boolean, name: string]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[knows: struct&lt;friends:array&lt;string&gt;&gt;, lovePandas: boolean, name: string]\n <div class='pull-right text-info'><small>237 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 18
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "newData.printSchema",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "root\n |-- knows: struct (nullable = true)\n |    |-- friends: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n |-- lovePandas: boolean (nullable = true)\n |-- name: string (nullable = true)\n\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>295 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 19
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "newData.registerTempTable(\"friends\")",
+    "outputs" : [ {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>267 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 20
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "newData.cache()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res11: newData.type = [knows: struct<friends:array<string>>, lovePandas: boolean, name: string]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[knows: struct&lt;friends:array&lt;string&gt;&gt;, lovePandas: boolean, name: string]\n <div class='pull-right text-info'><small>202 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 21
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "sqlCtx.sql(\"select * from friends where lovePandas=true\").collect()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res22: Array[org.apache.spark.sql.Row] = Array([[ArrayBuffer(Holden)],true,Sparky The Bear])\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Lorg.apache.spark.sql.Row;@a939c9f\n <div class='pull-right text-info'><small>242 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 32
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "sqlCtx.sql(\"select knows.friends[0] from friends where lovePandas=true\").collect()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res25: Array[org.apache.spark.sql.Row] = Array([Holden])\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Lorg.apache.spark.sql.Row;@c267426\n <div class='pull-right text-info'><small>218 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 35
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "---"
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "case class HappyPerson(handle: String, favouruteBeverage: String)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "defined class HappyPerson\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>398 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 36
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val happyPeopleRDD = sc.parallelize(List(HappyPerson(\"sukru\", \"tea\"))).toDF()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "happyPeopleRDD: org.apache.spark.sql.DataFrame = [handle: string, favouruteBeverage: string]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[handle: string, favouruteBeverage: string]\n <div class='pull-right text-info'><small>351 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 50
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "happyPeopleRDD.registerTempTable(\"happy_people\")",
+    "outputs" : [ {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "\n <div class='pull-right text-info'><small>334 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 51
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "sqlCtx.udf.register(\"strLen\", (_: String).length)",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res34: org.apache.spark.sql.UserDefinedFunction = UserDefinedFunction(<function1>,IntegerType)\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "UserDefinedFunction(&lt;function1&gt;,IntegerType)\n <div class='pull-right text-info'><small>435 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 55
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "val tweetLength = sqlCtx.sql(\"select strLen('tweet') from tweets limit 10\")  // this just passes the string \"tweet\"",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "tweetLength: org.apache.spark.sql.DataFrame = [c0: int]\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[c0: int]\n <div class='pull-right text-info'><small>231 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 62
+    } ]
+  }, {
+    "metadata" : {
+      "trusted" : true,
+      "input_collapsed" : false,
+      "collapsed" : false
+    },
+    "cell_type" : "code",
+    "source" : "tweetLength.collect()",
+    "outputs" : [ {
+      "name" : "stdout",
+      "output_type" : "stream",
+      "text" : "res39: Array[org.apache.spark.sql.Row] = Array([5])\n"
+    }, {
+      "metadata" : { },
+      "data" : {
+        "text/html" : "[Lorg.apache.spark.sql.Row;@77e4edf3\n <div class='pull-right text-info'><small>246 milliseconds</small></div>"
+      },
+      "output_type" : "execute_result",
+      "execution_count" : 64
+    } ]
+  }, {
+    "metadata" : { },
+    "cell_type" : "markdown",
+    "source" : "Done."
+  } ],
+  "nbformat" : 4
+}
