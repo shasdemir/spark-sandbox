@@ -1,4 +1,4 @@
-name := "learning-spark-mini-example"
+name := "spark-sandbox"
 
 version := "0.0.1"
 
