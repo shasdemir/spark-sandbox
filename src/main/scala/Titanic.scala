@@ -20,9 +20,6 @@ object Titanic {
             reader.readNext();
         }
 
-        //println(trainDataParsed.take(3).mkString(" "))
-        println(trainDataParsed.count())
-        println(trainDataParsed.getClass)
-        println(trainDataParsed.take(3)(0).mkString(" "))
+        println(trainDataParsed.take(5).map(_.mkString(" ")).mkString("\n"))
     }
 }
