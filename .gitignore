@@ -1,3 +1,4 @@
 target
 minitryOutput
 *.log
+*.ipynb_checkpoints

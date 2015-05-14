@@ -1,0 +1,803 @@
+{
+  "paragraphs": [
+    {
+      "text": "%md\n## MLLib Spam Classification Example",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "editorHide": true,
+        "tableHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431103176230_-1860301920",
+      "id": "20150508-193936_1387502865",
+      "result": {
+        "code": "SUCCESS",
+        "type": "HTML",
+        "msg": "\u003ch2\u003eMLLib Spam Classification Example\u003c/h2\u003e\n"
+      },
+      "dateCreated": "May 8, 2015 7:39:36 PM",
+      "dateStarted": "May 9, 2015 9:40:17 PM",
+      "dateFinished": "May 9, 2015 9:40:18 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "import org.apache.spark.mllib.regression.LabeledPoint\nimport org.apache.spark.mllib.feature.HashingTF\nimport org.apache.spark.mllib.classification.LogisticRegressionWithSGD",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431103217479_-1463363649",
+      "id": "20150508-194017_1942197506",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "import org.apache.spark.mllib.regression.LabeledPoint\nimport org.apache.spark.mllib.feature.HashingTF\nimport org.apache.spark.mllib.classification.LogisticRegressionWithSGD\n"
+      },
+      "dateCreated": "May 8, 2015 7:40:17 PM",
+      "dateStarted": "May 14, 2015 9:03:03 PM",
+      "dateFinished": "May 14, 2015 9:03:13 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val dataLocation \u003d \"/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/spam-classification/\"\nval spamText \u003d sc.textFile(dataLocation + \"spam.txt\")\nval normalText \u003d sc.textFile(dataLocation + \"ham.txt\")",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431105317663_-897579739",
+      "id": "20150508-201517_733165649",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "dataLocation: String \u003d /Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/spam-classification/\nspamText: org.apache.spark.rdd.RDD[String] \u003d /Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/spam-classification/spam.txt MappedRDD[1] at textFile at \u003cconsole\u003e:24\nnormalText: org.apache.spark.rdd.RDD[String] \u003d /Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/spam-classification/ham.txt MappedRDD[3] at textFile at \u003cconsole\u003e:24\n"
+      },
+      "dateCreated": "May 8, 2015 8:15:17 PM",
+      "dateStarted": "May 14, 2015 9:03:29 PM",
+      "dateFinished": "May 14, 2015 9:03:30 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val tf \u003d new HashingTF(numFeatures \u003d 10000)",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431105495863_-96689059",
+      "id": "20150508-201815_1283144097",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "tf: org.apache.spark.mllib.feature.HashingTF \u003d org.apache.spark.mllib.feature.HashingTF@48592a34\n"
+      },
+      "dateCreated": "May 8, 2015 8:18:15 PM",
+      "dateStarted": "May 14, 2015 9:03:34 PM",
+      "dateFinished": "May 14, 2015 9:03:34 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val spamFeatures \u003d spamText.map(email \u003d\u003e tf.transform(email.split(\" \")))\nval normalFeatures \u003d normalText.map(email \u003d\u003e tf.transform(email.split(\" \")))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431105928285_-2061955793",
+      "id": "20150508-202528_1816877296",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "spamFeatures: org.apache.spark.rdd.RDD[org.apache.spark.mllib.linalg.Vector] \u003d MappedRDD[4] at map at \u003cconsole\u003e:28\nnormalFeatures: org.apache.spark.rdd.RDD[org.apache.spark.mllib.linalg.Vector] \u003d MappedRDD[5] at map at \u003cconsole\u003e:28\n"
+      },
+      "dateCreated": "May 8, 2015 8:25:28 PM",
+      "dateStarted": "May 14, 2015 9:03:36 PM",
+      "dateFinished": "May 14, 2015 9:03:37 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val positiveExamples \u003d spamFeatures.map(LabeledPoint(1, _))\nval negativeExamples \u003d normalFeatures.map(LabeledPoint(0, _))\nval trainingData \u003d positiveExamples union negativeExamples\ntrainingData.cache()",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431106205001_1172838936",
+      "id": "20150508-203005_245540695",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "positiveExamples: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d MappedRDD[9] at map at \u003cconsole\u003e:30\nnegativeExamples: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d MappedRDD[10] at map at \u003cconsole\u003e:30\ntrainingData: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d UnionRDD[11] at union at \u003cconsole\u003e:38\nres6: trainingData.type \u003d UnionRDD[11] at union at \u003cconsole\u003e:38\n"
+      },
+      "dateCreated": "May 8, 2015 8:30:05 PM",
+      "dateStarted": "May 14, 2015 9:03:42 PM",
+      "dateFinished": "May 14, 2015 9:03:42 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val model \u003d new LogisticRegressionWithSGD().run(trainingData)",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431106372001_-599285494",
+      "id": "20150508-203252_1299970164",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "model: org.apache.spark.mllib.classification.LogisticRegressionModel \u003d org.apache.spark.mllib.classification.LogisticRegressionModel@3e43108f\n"
+      },
+      "dateCreated": "May 8, 2015 8:32:52 PM",
+      "dateStarted": "May 14, 2015 9:03:44 PM",
+      "dateFinished": "May 14, 2015 9:03:47 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val posTest \u003d tf.transform(\"O M G GET cheap stuff by sending money to ...\".split(\" \"))\nval negTest \u003d tf.transform(\"Hi Dad, I started studying Spark the other ...\".split(\" \"))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431106498538_1757453117",
+      "id": "20150508-203458_1659370912",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "posTest: org.apache.spark.mllib.linalg.Vector \u003d (10000,[71,77,79,454,3159,3290,3707,5678,6372,7023,9552],[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])\nnegTest: org.apache.spark.mllib.linalg.Vector \u003d (10000,[73,2149,2337,4801,4849,5678,5693,9401,9776],[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])\n"
+      },
+      "dateCreated": "May 8, 2015 8:34:58 PM",
+      "dateStarted": "May 14, 2015 9:03:48 PM",
+      "dateFinished": "May 14, 2015 9:03:48 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "println(model.predict(posTest))\nprintln(model.predict(negTest))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "editorHide": false,
+        "tableHide": false
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431106624377_1430217337",
+      "id": "20150508-203704_1169287269",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "1.0\n0.0\n"
+      },
+      "dateCreated": "May 8, 2015 8:37:04 PM",
+      "dateStarted": "May 14, 2015 9:03:50 PM",
+      "dateFinished": "May 14, 2015 9:03:51 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%md\n---",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        },
+        "editorHide": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431106684053_-1696344170",
+      "id": "20150508-203804_1812356248",
+      "result": {
+        "code": "SUCCESS",
+        "type": "HTML",
+        "msg": "\u003chr /\u003e\n"
+      },
+      "dateCreated": "May 8, 2015 8:38:04 PM",
+      "dateStarted": "May 10, 2015 1:48:21 AM",
+      "dateFinished": "May 10, 2015 1:48:21 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "LabeledPoint(1, Array(2, 3, 4))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431211689407_-1510284311",
+      "id": "20150510-014809_441225044",
+      "result": {
+        "code": "ERROR",
+        "type": "TEXT",
+        "msg": "\u003cconsole\u003e:21: error: type mismatch;\n found   : Array[Int]\n required: org.apache.spark.mllib.linalg.Vector\n              LabeledPoint(1, Array(2, 3, 4))\n                                   ^\n"
+      },
+      "dateCreated": "May 10, 2015 1:48:09 AM",
+      "dateStarted": "May 10, 2015 1:50:03 AM",
+      "dateFinished": "May 10, 2015 1:50:03 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "import org.apache.spark.mllib.linalg.Vectors",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431211803060_-214649230",
+      "id": "20150510-015003_1017477895",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "import org.apache.spark.mllib.linalg.Vectors\n"
+      },
+      "dateCreated": "May 10, 2015 1:50:03 AM",
+      "dateStarted": "May 10, 2015 1:52:33 AM",
+      "dateFinished": "May 10, 2015 1:52:33 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "LabeledPoint(1, Vectors.dense(Array(2.0, 3.0, 4.0)))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431211837068_-623591338",
+      "id": "20150510-015037_1122854376",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res17: org.apache.spark.mllib.regression.LabeledPoint \u003d (1.0,[2.0,3.0,4.0])\n"
+      },
+      "dateCreated": "May 10, 2015 1:50:37 AM",
+      "dateStarted": "May 10, 2015 1:53:20 AM",
+      "dateFinished": "May 10, 2015 1:53:20 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val someDataAsText \u003d \"12.0, 15.0\\n17.0, 34.0\\n56.0, 67.0\"",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431211908258_2096629882",
+      "id": "20150510-015148_156853380",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "someDataAsText: String \u003d \n12.0, 15.0\n17.0, 34.0\n56.0, 67.0\n"
+      },
+      "dateCreated": "May 10, 2015 1:51:48 AM",
+      "dateStarted": "May 10, 2015 1:57:13 AM",
+      "dateFinished": "May 10, 2015 1:57:13 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val dataScala \u003d someDataAsText.split(\"\\n\").map(_.split(\",\").map(_.trim))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431212233759_-1357385232",
+      "id": "20150510-015713_1579253805",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "dataScala: Array[Array[String]] \u003d Array(Array(12.0, 15.0), Array(17.0, 34.0), Array(56.0, 67.0))\n"
+      },
+      "dateCreated": "May 10, 2015 1:57:13 AM",
+      "dateStarted": "May 10, 2015 2:11:21 AM",
+      "dateFinished": "May 10, 2015 2:11:22 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val dataRDD \u003d sc.parallelize(dataScala.map(_.map(_.toDouble)))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431212279397_-1717232723",
+      "id": "20150510-015759_1229694381",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "dataRDD: org.apache.spark.rdd.RDD[Array[Double]] \u003d ParallelCollectionRDD[214] at parallelize at \u003cconsole\u003e:28\n"
+      },
+      "dateCreated": "May 10, 2015 1:57:59 AM",
+      "dateStarted": "May 10, 2015 2:26:56 AM",
+      "dateFinished": "May 10, 2015 2:26:57 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val negDataRDD \u003d sc.parallelize(Array(Array(24.0, 45.0)))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431212690115_-1226143174",
+      "id": "20150510-020450_1621121865",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "negDataRDD: org.apache.spark.rdd.RDD[Array[Double]] \u003d ParallelCollectionRDD[212] at parallelize at \u003cconsole\u003e:24\n"
+      },
+      "dateCreated": "May 10, 2015 2:04:50 AM",
+      "dateStarted": "May 10, 2015 2:21:22 AM",
+      "dateFinished": "May 10, 2015 2:21:22 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "dataRDD.take(2)",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431213682669_-274019341",
+      "id": "20150510-022122_572489373",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res98: Array[Array[Double]] \u003d Array(Array(12.0, 15.0), Array(17.0, 34.0))\n"
+      },
+      "dateCreated": "May 10, 2015 2:21:22 AM",
+      "dateStarted": "May 10, 2015 2:28:26 AM",
+      "dateFinished": "May 10, 2015 2:28:27 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "negDataRDD.first",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214188599_-2002098212",
+      "id": "20150510-022948_1605701476",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res101: Array[Double] \u003d Array(24.0, 45.0)\n"
+      },
+      "dateCreated": "May 10, 2015 2:29:48 AM",
+      "dateStarted": "May 10, 2015 2:30:09 AM",
+      "dateFinished": "May 10, 2015 2:30:09 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val posFeatures \u003d dataRDD.map(Vectors.dense(_))\nval negFeatures \u003d negDataRDD.map(Vectors.dense(_))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431213723507_143261360",
+      "id": "20150510-022203_1894625819",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "posFeatures: org.apache.spark.rdd.RDD[org.apache.spark.mllib.linalg.Vector] \u003d MappedRDD[219] at map at \u003cconsole\u003e:30\nnegFeatures: org.apache.spark.rdd.RDD[org.apache.spark.mllib.linalg.Vector] \u003d MappedRDD[220] at map at \u003cconsole\u003e:26\n"
+      },
+      "dateCreated": "May 10, 2015 2:22:03 AM",
+      "dateStarted": "May 10, 2015 2:33:43 AM",
+      "dateFinished": "May 10, 2015 2:33:43 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val posExamples \u003d posFeatures.map(LabeledPoint(1, _))\nval negExamples \u003d negFeatures.map(LabeledPoint(0, _))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214054436_-859994911",
+      "id": "20150510-022734_109535935",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "posExamples: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d MappedRDD[221] at map at \u003cconsole\u003e:32\nnegExamples: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d MappedRDD[222] at map at \u003cconsole\u003e:28\n"
+      },
+      "dateCreated": "May 10, 2015 2:27:34 AM",
+      "dateStarted": "May 10, 2015 2:33:45 AM",
+      "dateFinished": "May 10, 2015 2:33:45 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val newTrainingData \u003d posExamples.union(negExamples).cache()",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431213831649_2036195301",
+      "id": "20150510-022351_1679755110",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "newTrainingData: org.apache.spark.rdd.RDD[org.apache.spark.mllib.regression.LabeledPoint] \u003d UnionRDD[223] at union at \u003cconsole\u003e:40\n"
+      },
+      "dateCreated": "May 10, 2015 2:23:51 AM",
+      "dateStarted": "May 10, 2015 2:34:54 AM",
+      "dateFinished": "May 10, 2015 2:34:54 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "val newModel \u003d new LogisticRegressionWithSGD().run(newTrainingData)",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214494875_1126491020",
+      "id": "20150510-023454_1112871907",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "newModel: org.apache.spark.mllib.classification.LogisticRegressionModel \u003d org.apache.spark.mllib.classification.LogisticRegressionModel@30ec8d98\n"
+      },
+      "dateCreated": "May 10, 2015 2:34:54 AM",
+      "dateStarted": "May 10, 2015 2:36:47 AM",
+      "dateFinished": "May 10, 2015 2:36:50 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "newModel.predict(Vectors.dense(Array(25.0, 43.2)))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214540891_-1072672396",
+      "id": "20150510-023540_1592596728",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res110: Double \u003d 0.0\n"
+      },
+      "dateCreated": "May 10, 2015 2:35:40 AM",
+      "dateStarted": "May 10, 2015 2:36:51 AM",
+      "dateFinished": "May 10, 2015 2:36:51 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "newModel.predict(Vectors.dense(Array(14.0, 16.2)))",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214599222_1144543570",
+      "id": "20150510-023639_1673665280",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res112: Double \u003d 1.0\n"
+      },
+      "dateCreated": "May 10, 2015 2:36:39 AM",
+      "dateStarted": "May 10, 2015 2:37:12 AM",
+      "dateFinished": "May 10, 2015 2:37:12 AM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "config": {},
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1431214632614_158294221",
+      "id": "20150510-023712_352052787",
+      "dateCreated": "May 10, 2015 2:37:12 AM",
+      "status": "READY",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "MLlib-SpamClassification",
+  "id": "2AQRXAGXP",
+  "angularObjects": {},
+  "config": {
+    "looknfeel": "default"
+  },
+  "info": {}
+}
