@@ -4,6 +4,7 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 import au.com.bytecode.opencsv.CSVReader
 import java.io.StringReader
+import scala.io.Source
 
 
 object Titanic {
@@ -20,17 +21,12 @@ object Titanic {
                          Cabin: Option[String], Embarked: Option[String])
 
     def loadTrainingData(): RDD[Passenger] = {
-        val trainDataText = sc.textFile(trainDataFile)
-        val trainDataParsed = trainDataText.map{line =>
-            val reader = new CSVReader(new StringReader(line));
-            reader.readNext();
-        }
-        trainDataParsed.cache()
+        val trainingDataText = Source.fromFile(trainDataFile).getLines().toArray.tail  //remove headers
+        val trainingDataParsed = trainingDataText.map{line =>
+                val reader = new CSVReader(new StringReader(line))
+                reader.readNext()}
 
-        // println(trainDataParsed.take(10).map(_.mkString(" ")).mkString("\n"))
-        val headerlessTrainDataParsed = sc.parallelize(trainDataParsed.take(trainDataParsed.count().toInt).drop(1))
-
-        val trainData = headerlessTrainDataParsed.map(lineArray => new Passenger(
+        val trainingDataPassengers = trainingDataParsed.map(lineArray => new Passenger(
             PassengerId = lineArray(0).toInt,
             Survived = if (lineArray(1) != "") Some(lineArray(1).toInt) else None,
             Pclass = if (lineArray(2) != "") Some(lineArray(2).toInt) else None,
@@ -43,13 +39,14 @@ object Titanic {
             Fare = if (lineArray(9) != "") Some(lineArray(9).toDouble) else None,
             Cabin = if (lineArray(10) != "") Some(lineArray(10).toString) else None,
             Embarked = if (lineArray(11) != "") Some(lineArray(11).toString) else None
-        )).cache()
+        ))
 
-        trainData
+        sc.parallelize(trainingDataPassengers).cache()
     }
 
     def main(args: Array[String]): Unit = {
         val trainingData = loadTrainingData()
-        println(trainingData.take(2).mkString("\n\n"))
+        println()
+        println(trainingData.take(10).mkString("\n\n"))
     }
 }
