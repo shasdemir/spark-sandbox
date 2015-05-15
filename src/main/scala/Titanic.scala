@@ -1,34 +1,36 @@
-import java.io.StringReader
-
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
+import org.apache.spark.rdd.RDD
 import au.com.bytecode.opencsv.CSVReader
+import java.io.StringReader
+
 
 object Titanic {
-    def main(args: Array[String]): Unit = {
-        val conf = new SparkConf().setMaster("local[*]").setAppName("Titanic")
-        val sc = new SparkContext(conf)
+    val conf = new SparkConf().setMaster("local[*]").setAppName("Titanic")
+    val sc = new SparkContext(conf)
 
-        val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/titanic/"
-        val trainDataFile = dataFolder + "train.csv"
-        val testDataFile = dataFolder + "test.csv"
+    val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/titanic/"
+    val trainDataFile = dataFolder + "train.csv"
+    val testDataFile = dataFolder + "test.csv"
 
+    case class Passenger(PassengerId: Integer, Survived: Option[Integer], Pclass: Option[Integer],
+                         Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Integer],
+                         Parch: Option[Integer], Ticket: Option[String], Fare: Option[Double],
+                         Cabin: Option[String], Embarked: Option[String])
+
+    def loadTrainingData(): RDD[Passenger] = {
         val trainDataText = sc.textFile(trainDataFile)
         val trainDataParsed = trainDataText.map{line =>
             val reader = new CSVReader(new StringReader(line));
             reader.readNext();
         }
         trainDataParsed.cache()
-        println(trainDataParsed.take(10).map(_.mkString(" ")).mkString("\n"))
-        val headlessTrainDataParsed = trainDataParsed.take(trainDataParsed.count().toInt).drop(1)
 
-        case class Passenger(PassengerId: Integer, Survived: Option[Integer], Pclass: Option[Integer],
-                             Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Integer],
-                             Parch: Option[Integer], Ticket: Option[String], Fare: Option[Double],
-                             Cabin: Option[String], Embarked: Option[String])
+        // println(trainDataParsed.take(10).map(_.mkString(" ")).mkString("\n"))
+        val headerlessTrainDataParsed = sc.parallelize(trainDataParsed.take(trainDataParsed.count().toInt).drop(1))
 
-        val trainData = headlessTrainDataParsed.map(lineArray => new Passenger(
+        val trainData = headerlessTrainDataParsed.map(lineArray => new Passenger(
             PassengerId = lineArray(0).toInt,
             Survived = if (lineArray(1) != "") Some(lineArray(1).toInt) else None,
             Pclass = if (lineArray(2) != "") Some(lineArray(2).toInt) else None,
@@ -41,9 +43,13 @@ object Titanic {
             Fare = if (lineArray(9) != "") Some(lineArray(9).toDouble) else None,
             Cabin = if (lineArray(10) != "") Some(lineArray(10).toString) else None,
             Embarked = if (lineArray(11) != "") Some(lineArray(11).toString) else None
-        ))
+        )).cache()
 
-        println(trainData.take(2).mkString(" "))
+        trainData
+    }
 
+    def main(args: Array[String]): Unit = {
+        val trainingData = loadTrainingData()
+        println(trainingData.take(2).mkString("\n\n"))
     }
 }
