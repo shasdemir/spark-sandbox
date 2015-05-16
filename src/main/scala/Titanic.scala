@@ -20,13 +20,13 @@ object Titanic {
                          Parch: Option[Integer], Ticket: Option[String], Fare: Option[Double],
                          Cabin: Option[String], Embarked: Option[String])
 
-    def loadTrainingData(): RDD[Passenger] = {
-        val trainingDataText = Source.fromFile(trainDataFile).getLines().toArray.tail  //remove headers
-        val trainingDataParsed = trainingDataText.map{line =>
+    def loadDataFile(path: String): RDD[Passenger] = {
+        val dataText = Source.fromFile(path).getLines().toArray.tail  //remove headers
+        val dataParsed = dataText.map{line =>
                 val reader = new CSVReader(new StringReader(line))
                 reader.readNext()}
 
-        val trainingDataPassengers = trainingDataParsed.map(lineArray => new Passenger(
+        val dataPassengers = dataParsed.map(lineArray => new Passenger(
             PassengerId = lineArray(0).toInt,
             Survived = if (lineArray(1) != "") Some(lineArray(1).toInt) else None,
             Pclass = if (lineArray(2) != "") Some(lineArray(2).toInt) else None,
@@ -41,11 +41,11 @@ object Titanic {
             Embarked = if (lineArray(11) != "") Some(lineArray(11).toString) else None
         ))
 
-        sc.parallelize(trainingDataPassengers).cache()
+        sc.parallelize(dataPassengers).cache()
     }
 
     def main(args: Array[String]): Unit = {
-        val trainingData = loadTrainingData()
+        val trainingData = loadDataFile(trainDataFile)
         println()
         println(trainingData.take(10).mkString("\n\n"))
     }
