@@ -2,6 +2,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
+
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.classification.{LogisticRegressionWithLBFGS, LogisticRegressionModel}
+import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+
 import au.com.bytecode.opencsv.CSVReader
 import java.io.StringReader
 import scala.io.Source
@@ -46,7 +52,19 @@ object Titanic {
 
     def main(args: Array[String]): Unit = {
         val trainingData = loadDataFile(trainDataFile)
+        val trainingDataCount = trainingData.count()
+
         println()
-        println(trainingData.take(10).mkString("\n\n"))
+        // println(trainingData.take(10).mkString("\n\n"))
+
+        // do every passenger has PassengerId, Survived, Pclass, Sex, Age attributes?
+        println("Number of passangers without a Survived attribute: " + trainingData.filter(_.Survived == None).count())
+        println("Number of passangers without a Pclass attribute: " + trainingData.filter(_.Pclass == None).count())
+        println("Number of passangers without a Sex attribute: " + trainingData.filter(_.Sex == None).count())
+        println("Number of passangers without a Age attribute: " + trainingData.filter(_.Age == None).count())  // 177
+
+
+
+
     }
 }
