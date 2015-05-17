@@ -21,9 +21,9 @@ object Titanic {
     val trainDataFile = dataFolder + "train.csv"
     val testDataFile = dataFolder + "test.csv"
 
-    case class Passenger(PassengerId: Integer, Survived: Option[Integer], Pclass: Option[Integer],
-                         Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Integer],
-                         Parch: Option[Integer], Ticket: Option[String], Fare: Option[Double],
+    case class Passenger(PassengerId: Int, Survived: Option[Int], Pclass: Option[Int],
+                         Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Int],
+                         Parch: Option[Int], Ticket: Option[String], Fare: Option[Double],
                          Cabin: Option[String], Embarked: Option[String])
 
     def loadDataFile(path: String): RDD[Passenger] = {
@@ -51,20 +51,28 @@ object Titanic {
     }
 
     def main(args: Array[String]): Unit = {
-        val trainingData = loadDataFile(trainDataFile)
-        val trainingDataCount = trainingData.count()
+        val trainingDataRaw = loadDataFile(trainDataFile)
+        val trainingDataCount = trainingDataRaw.count()
 
         println()
         // println(trainingData.take(10).mkString("\n\n"))
 
         // do every passenger has PassengerId, Survived, Pclass, Sex, Age attributes?
-        println("Number of passangers without a Survived attribute: " + trainingData.filter(_.Survived == None).count())
-        println("Number of passangers without a Pclass attribute: " + trainingData.filter(_.Pclass == None).count())
-        println("Number of passangers without a Sex attribute: " + trainingData.filter(_.Sex == None).count())
-        println("Number of passangers without a Age attribute: " + trainingData.filter(_.Age == None).count())  // 177
+        println("Number of passangers without a Survived attribute: " + trainingDataRaw.filter(_.Survived == None).count())
+        println("Number of passangers without a Pclass attribute: " + trainingDataRaw.filter(_.Pclass == None).count())
+        println("Number of passangers without a Sex attribute: " + trainingDataRaw.filter(_.Sex == None).count())
+        println("Number of passangers without a Age attribute: " + trainingDataRaw.filter(_.Age == None).count())  // 177
 
+        // prepare features, using only class and gender now
+        def PclassFeatureize(Pclass: Int) = Pclass - 1.0  // categorical variables start from 0 in MLLib
+        def genderFeatureize(gender: String) = if (gender == "male") 1.0 else 0.0
 
+        val trainingData = trainingDataRaw.map(person =>
+            LabeledPoint(person.Survived.get,
+                Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get)))).cache()
 
+        // try class and gender based LR model
+        //val  LRModel = new LogisticRegressionWithLBFGS().set
 
     }
 }
