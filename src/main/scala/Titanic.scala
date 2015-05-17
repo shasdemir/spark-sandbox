@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.classification.{LogisticRegressionWithLBFGS, LogisticRegressionModel}
-import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
 import au.com.bytecode.opencsv.CSVReader
 import java.io.StringReader
@@ -21,7 +21,7 @@ object Titanic {
     val trainDataFile = dataFolder + "train.csv"
     val testDataFile = dataFolder + "test.csv"
 
-    case class Passenger(PassengerId: Int, Survived: Option[Int], Pclass: Option[Int],
+    case class Passenger(PassengerId: Int, Survived: Option[Int] = None, Pclass: Option[Int],
                          Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Int],
                          Parch: Option[Int], Ticket: Option[String], Fare: Option[Double],
                          Cabin: Option[String], Embarked: Option[String])
@@ -52,7 +52,7 @@ object Titanic {
 
     def main(args: Array[String]): Unit = {
         val trainingDataRaw = loadDataFile(trainDataFile)
-        val trainingDataCount = trainingDataRaw.count()
+        val testDataRaw = loadDataFile(testDataFile)
 
         println()
         // println(trainingData.take(10).mkString("\n\n"))
@@ -63,6 +63,11 @@ object Titanic {
         println("Number of passangers without a Sex attribute: " + trainingDataRaw.filter(_.Sex == None).count())
         println("Number of passangers without a Age attribute: " + trainingDataRaw.filter(_.Age == None).count())  // 177
 
+        println("Number of TESTS without a Survived attribute: " + testDataRaw.filter(_.Survived == None).count())
+        println("Number of TESTS without a Pclass attribute: " + testDataRaw.filter(_.Pclass == None).count())
+        println("Number of TESTS without a Sex attribute: " + testDataRaw.filter(_.Sex == None).count())
+        println("Number of TESTS without a Age attribute: " + testDataRaw.filter(_.Age == None).count())
+
         // prepare features, using only class and gender now
         def PclassFeatureize(Pclass: Int) = Pclass - 1.0  // categorical variables start from 0 in MLLib
         def genderFeatureize(gender: String) = if (gender == "male") 1.0 else 0.0
@@ -71,8 +76,31 @@ object Titanic {
             LabeledPoint(person.Survived.get,
                 Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get)))).cache()
 
-        // try class and gender based LR model
-        //val  LRModel = new LogisticRegressionWithLBFGS().set
+        val testData = testDataRaw.map(person =>
+            Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get))).cache()
 
+        // separate training data to initial training and validation sets
+        val splits = trainingData.randomSplit(Array(0.8, 0.2), seed = 11L)
+        val initialTrainingData, validationData = splits(0).cache(), splits(1)
+
+
+
+
+        // try class and gender based LR model
+        val  LRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(trainingData)
+
+        // evaluate over test data
+
+
+        val LRMetrics = new MulticlassMetrics(LRPredictionAndLabels)
+        println("Logistic Regression precision: " + LRMetrics.precision)
+        println("Logistic Regression recall: " + LRMetrics.recall)
+        //println("Correctly classified %: " + LRPredictionAndLabels.filter(case (key: Double, value: Double) => key == value)
+
+        // predict test data to submit
+        val LRPredictionAndLabels = testData.map { case LabeledPoint(label, features) =>
+            val prediction = LRModel.predict(features)
+            (prediction, label)
+        }.cache()
     }
 }
