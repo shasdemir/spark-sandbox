@@ -8,99 +8,85 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.classification.{LogisticRegressionWithLBFGS, LogisticRegressionModel}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
-import au.com.bytecode.opencsv.CSVReader
-import java.io.StringReader
-import scala.io.Source
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.functions._
+import com.databricks.spark.csv._
 
 
 object Titanic {
     val conf = new SparkConf().setMaster("local[*]").setAppName("Titanic")
     val sc = new SparkContext(conf)
+    val sqlContext = new SQLContext(sc)
 
     val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/titanic/"
     val trainDataFile = dataFolder + "train.csv"
     val testDataFile = dataFolder + "test.csv"
 
-    case class Passenger(PassengerId: Int, Survived: Option[Int] = None, Pclass: Option[Int],
-                         Name: Option[String], Sex: Option[String], Age: Option[Double], SibSp: Option[Int],
-                         Parch: Option[Int], Ticket: Option[String], Fare: Option[Double],
-                         Cabin: Option[String], Embarked: Option[String])
-
-    def loadDataFile(path: String): RDD[Passenger] = {
-        val dataText = Source.fromFile(path).getLines().toArray.tail  //remove headers
-        val dataParsed = dataText.map{line =>
-                val reader = new CSVReader(new StringReader(line))
-                reader.readNext()}
-
-        val dataPassengers = dataParsed.map(lineArray => new Passenger(
-            PassengerId = lineArray(0).toInt,
-            Survived = if (lineArray(1) != "") Some(lineArray(1).toInt) else None,
-            Pclass = if (lineArray(2) != "") Some(lineArray(2).toInt) else None,
-            Name = if (lineArray(3) != "") Some(lineArray(3).toString) else None,
-            Sex = if (lineArray(4) != "") Some(lineArray(4).toString) else None,
-            Age = if (lineArray(5) != "") Some(lineArray(5).toDouble) else None,
-            SibSp = if (lineArray(6) != "") Some(lineArray(6).toInt) else None,
-            Parch = if (lineArray(7) != "") Some(lineArray(7).toInt) else None,
-            Ticket = if (lineArray(8) != "") Some(lineArray(8).toString) else None,
-            Fare = if (lineArray(9) != "") Some(lineArray(9).toDouble) else None,
-            Cabin = if (lineArray(10) != "") Some(lineArray(10).toString) else None,
-            Embarked = if (lineArray(11) != "") Some(lineArray(11).toString) else None
-        ))
-
-        sc.parallelize(dataPassengers).cache()
-    }
-
     def main(args: Array[String]): Unit = {
-        val trainingDataRaw = loadDataFile(trainDataFile)
-        val testDataRaw = loadDataFile(testDataFile)
+        val trainingCSV = sqlContext.csvFile(trainDataFile, useHeader = true).cache()
+        val testCSV = sqlContext.csvFile(testDataFile, useHeader = true).cache()
 
-        println()
-        // println(trainingData.take(10).mkString("\n\n"))
+        println("Number of passangers without a Survived attribute: " + trainingCSV.filter(trainingCSV("Survived") === "").count())
+        println("Number of passangers without a Pclass attribute: " + trainingCSV.filter(trainingCSV("Pclass") === "").count())
+        println("Number of passangers without a Sex attribute: " + trainingCSV.filter(trainingCSV("Sex") === "").count())
+        println("Number of passangers without a Age attribute: " + trainingCSV.filter(trainingCSV("Age") === "").count())  // 177
 
-        // do every passenger has PassengerId, Survived, Pclass, Sex, Age attributes?
-        println("Number of passangers without a Survived attribute: " + trainingDataRaw.filter(_.Survived == None).count())
-        println("Number of passangers without a Pclass attribute: " + trainingDataRaw.filter(_.Pclass == None).count())
-        println("Number of passangers without a Sex attribute: " + trainingDataRaw.filter(_.Sex == None).count())
-        println("Number of passangers without a Age attribute: " + trainingDataRaw.filter(_.Age == None).count())  // 177
+        val toInt = udf[Int, String](_.toInt)
+        val classUdf = udf[Int, String](_.toInt - 1)  // categorical variables start from 0 in MLLib
+        val genderUdf = udf[Int, String](gen => if (gen == "male") 1 else 0)
 
-        println("Number of TESTS without a Survived attribute: " + testDataRaw.filter(_.Survived == None).count())
-        println("Number of TESTS without a Pclass attribute: " + testDataRaw.filter(_.Pclass == None).count())
-        println("Number of TESTS without a Sex attribute: " + testDataRaw.filter(_.Sex == None).count())
-        println("Number of TESTS without a Age attribute: " + testDataRaw.filter(_.Age == None).count())
+        val trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUdf(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUdf(trainingCSV("Sex")))
+                .select("Survival", "Id", "Class", "Gender")
+        trainingDataCasted.show()
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUdf(testCSV("Pclass")))
+                .withColumn("Gender", genderUdf(testCSV("Sex")))
+                .select("Id", "Class", "Gender")
+        testDataCasted.show()
+
 
         // prepare features, using only class and gender now
-        def PclassFeatureize(Pclass: Int) = Pclass - 1.0  // categorical variables start from 0 in MLLib
-        def genderFeatureize(gender: String) = if (gender == "male") 1.0 else 0.0
-
-        val trainingData = trainingDataRaw.map(person =>
-            LabeledPoint(person.Survived.get,
-                Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get)))).cache()
-
-        val testData = testDataRaw.map(person =>
-            Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get))).cache()
-
-        // separate training data to initial training and validation sets
-        val splits = trainingData.randomSplit(Array(0.8, 0.2), seed = 11L)
-        val initialTrainingData, validationData = splits(0).cache(), splits(1)
-
+//        def PclassFeatureize(Pclass: Int) = Pclass - 1.0  // categorical variables start from 0 in MLLib
+//        def genderFeatureize(gender: String) = if (gender == "male") 1.0 else 0.0
+//
+//        val trainingData = trainingDataRaw.map(person =>
+//            LabeledPoint(person.Survived.get,
+//                Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get)))).cache()
+//
+//        val testData = testDataRaw.map(person =>
+//            Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get))).cache()
+//
+//        // separate training data to initial training and validation sets
+//        val splits = trainingData.randomSplit(Array(0.8, 0.2), seed = 11L)
+//        val (initialTrainingData, validationData) = (splits(0).cache(), splits(1).cache())
+//        // *** data prep finishes here ***
+//
+//        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(initialTrainingData)
+//
+//        val LRValidationResults = validationData.map {
+//            case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
+//        }.cache()
+//
+//        //val classificationError = LRValidationResults.filter(case (key: Double, value: Double) => key == value).
+//        val validationMetrics = new MulticlassMetrics(LRValidationResults)
+//        println("Logistic Regression precision: " + validationMetrics.precision)
+//        println("Logistic Regression recall: " + validationMetrics.recall)
+//
+//        println("Type of LRValidationResults: " + LRValidationResults.getClass)
 
 
 
         // try class and gender based LR model
-        val  LRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(trainingData)
+        //val  LRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(trainingData)
 
         // evaluate over test data
 
-
-        val LRMetrics = new MulticlassMetrics(LRPredictionAndLabels)
-        println("Logistic Regression precision: " + LRMetrics.precision)
-        println("Logistic Regression recall: " + LRMetrics.recall)
-        //println("Correctly classified %: " + LRPredictionAndLabels.filter(case (key: Double, value: Double) => key == value)
-
         // predict test data to submit
-        val LRPredictionAndLabels = testData.map { case LabeledPoint(label, features) =>
-            val prediction = LRModel.predict(features)
-            (prediction, label)
-        }.cache()
     }
 }
