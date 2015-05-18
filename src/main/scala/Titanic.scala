@@ -57,7 +57,8 @@ object Titanic {
         val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
         // *** data prep finishes here ***
 
-        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(initialTrainingFeatures)
+        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(initialTrainingFeatures)
 
         val LRValidationResults = validationFeatures.map {
             case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
@@ -66,17 +67,11 @@ object Titanic {
         val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
         LRValidationResults.count()
 
-
+        println("Classification error rate: " + classificationError)
         val validationMetrics = new MulticlassMetrics(LRValidationResults)
-//        println("Logistic Regression precision: " + validationMetrics.precision)
-//        println("Logistic Regression recall: " + validationMetrics.recall)
-//
-//        println("Type of LRValidationResults: " + LRValidationResults.getClass)
+        println("Logistic Regression precision: " + validationMetrics.precision)
+        println("Logistic Regression recall: " + validationMetrics.recall)
 
-
-
-        // try class and gender based LR model
-        //val  LRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(trainingData)
 
         // evaluate over test data
 
