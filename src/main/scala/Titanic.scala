@@ -32,49 +32,42 @@ object Titanic {
         println("Number of passangers without a Age attribute: " + trainingCSV.filter(trainingCSV("Age") === "").count())  // 177
 
         val toInt = udf[Int, String](_.toInt)
-        val classUdf = udf[Int, String](_.toInt - 1)  // categorical variables start from 0 in MLLib
-        val genderUdf = udf[Int, String](gen => if (gen == "male") 1 else 0)
+        val classUdf = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
+        val genderUdf = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
 
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
                 .withColumn("Class", classUdf(trainingCSV("Pclass")))
                 .withColumn("Gender", genderUdf(trainingCSV("Sex")))
-                .select("Survival", "Id", "Class", "Gender")
+                .select("Survival", "Class", "Gender")
         trainingDataCasted.show()
 
         val testDataCasted = testCSV
-                .withColumn("Id", toInt(testCSV("PassengerId")))
                 .withColumn("Class", classUdf(testCSV("Pclass")))
                 .withColumn("Gender", genderUdf(testCSV("Sex")))
-                .select("Id", "Class", "Gender")
+                .select("Class", "Gender")
         testDataCasted.show()
 
+        val trainingFeatures = trainingDataCasted.map(row =>
+            LabeledPoint(row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2))))
+        val testFeatures = testDataCasted.map(row => Vector(row.getDouble(1), row.getDouble(2)))
 
-        // prepare features, using only class and gender now
-//        def PclassFeatureize(Pclass: Int) = Pclass - 1.0  // categorical variables start from 0 in MLLib
-//        def genderFeatureize(gender: String) = if (gender == "male") 1.0 else 0.0
-//
-//        val trainingData = trainingDataRaw.map(person =>
-//            LabeledPoint(person.Survived.get,
-//                Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get)))).cache()
-//
-//        val testData = testDataRaw.map(person =>
-//            Vectors.dense(PclassFeatureize(person.Pclass.get), genderFeatureize(person.Sex.get))).cache()
-//
-//        // separate training data to initial training and validation sets
-//        val splits = trainingData.randomSplit(Array(0.8, 0.2), seed = 11L)
-//        val (initialTrainingData, validationData) = (splits(0).cache(), splits(1).cache())
-//        // *** data prep finishes here ***
-//
-//        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(initialTrainingData)
-//
-//        val LRValidationResults = validationData.map {
-//            case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
-//        }.cache()
-//
-//        //val classificationError = LRValidationResults.filter(case (key: Double, value: Double) => key == value).
-//        val validationMetrics = new MulticlassMetrics(LRValidationResults)
+        val splits = trainingFeatures.randomSplit(Array(0.8, 0.2), seed=11L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+        // *** data prep finishes here ***
+
+        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).run(initialTrainingFeatures)
+
+        val LRValidationResults = validationFeatures.map {
+            case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
+        }.cache()
+
+        val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
+        LRValidationResults.count()
+
+
+        val validationMetrics = new MulticlassMetrics(LRValidationResults)
 //        println("Logistic Regression precision: " + validationMetrics.precision)
 //        println("Logistic Regression recall: " + validationMetrics.recall)
 //
