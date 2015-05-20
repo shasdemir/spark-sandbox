@@ -50,10 +50,10 @@ object Titanic {
         testDataCasted.show()
 
         val trainingFeatures = trainingDataCasted.map(row =>
-            LabeledPoint(row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2))))
-        val testFeatures = testDataCasted.map(row => Vector(row.getDouble(1), row.getDouble(2)))
+            LabeledPoint(row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2)))).cache()
+        val testFeatures = testDataCasted.map(row => Vectors.dense(row.getDouble(1), row.getDouble(2)))
 
-        val splits = trainingFeatures.randomSplit(Array(0.8, 0.2), seed=11L)
+        val splits = trainingFeatures.randomSplit(Array(0.8, 0.2), seed=12345L)
         val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
         // *** data prep finishes here ***
 
@@ -67,13 +67,20 @@ object Titanic {
         val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
         LRValidationResults.count()
 
-        println("Classification error rate: " + classificationError)
+        println("Logistic Regression classification error rate: " + classificationError)
         val validationMetrics = new MulticlassMetrics(LRValidationResults)
         println("Logistic Regression precision: " + validationMetrics.precision)
         println("Logistic Regression recall: " + validationMetrics.recall)
 
 
+        // train full model
+        val LRGenderClassModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+            .run(trainingFeatures)
+
         // evaluate over test data
+        val LRGenderClassResults = LRGenderClassModel.predict(testFeatures)
+             //case LabeledPoint(label, features) => (LRGenderClassModel.predict(features))
+
 
         // predict test data to submit
     }
