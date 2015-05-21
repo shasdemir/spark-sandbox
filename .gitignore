@@ -2,4 +2,6 @@ target
 minitryOutput
 *.log
 *.ipynb_checkpoints
-*.metastore_db
+metastore_db
+logs
+results
