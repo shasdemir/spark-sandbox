@@ -24,8 +24,9 @@ object FilePaths {
 
 object TitanicUDFs {
     val toInt = udf[Int, String](_.toInt)
-    val classUdf = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
-    val genderUdf = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
+    val classUDF = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
+    val genderUDF = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
+    val ageUDF = udf[Double, String](rawAge => if (rawAge == "") 0.0 else rawAge.toDouble)
 }
 
 
@@ -57,14 +58,14 @@ object Titanic {
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
-                .withColumn("Class", classUdf(trainingCSV("Pclass")))
-                .withColumn("Gender", genderUdf(trainingCSV("Sex")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
                 .select("Id", "Survival", "Class", "Gender")
 
         val testDataCasted = testCSV
                 .withColumn("Id", toInt(testCSV("PassengerId")))
-                .withColumn("Class", classUdf(testCSV("Pclass")))
-                .withColumn("Gender", genderUdf(testCSV("Sex")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
                 .select("Id", "Class", "Gender")
 
         val trainingFeatures = trainingDataCasted.map(row =>
@@ -76,6 +77,20 @@ object Titanic {
 
         (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
     }
+
+
+    def prepGenderClassAgeData() = {
+        val trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
+                .withColumn("AgeMash", ageUDF(trainingCSV("Age")))
+                .select("Id", "Survival", "Class", "Gender", "AgeMash")
+
+        val tGrouped = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash")
+    }
+
 
     def runGenderClassLRModel(): Unit = {
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassData()
