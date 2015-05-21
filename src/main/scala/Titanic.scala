@@ -8,7 +8,7 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.classification.{LogisticRegressionWithLBFGS, LogisticRegressionModel}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.sql.{DataFrame, SQLContext, Row}
 import org.apache.spark.sql.functions._
 import com.databricks.spark.csv._
 
@@ -86,9 +86,23 @@ object Titanic {
                 .withColumn("Class", classUDF(trainingCSV("Pclass")))
                 .withColumn("Gender", genderUDF(trainingCSV("Sex")))
                 .withColumn("AgeMash", ageUDF(trainingCSV("Age")))
-                .select("Id", "Survival", "Class", "Gender", "AgeMash")
+                .select("Id", "Survival", "Class", "Gender", "AgeMash").cache()
 
-        val tGrouped = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash")
+        val trainingAgeAverages = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
+
+        def getAverageAge(ageAveragesData: Array[Row], Class: Double, Gender: Double): Double =  // to impute for age
+            ageAveragesData.filter(row => row.getDouble(0) == Class && row.getDouble(1) == Gender)(0).getDouble(2)
+
+        val trainingDataImputed = trainingDataCasted.rdd.map { row =>
+            Array(row.getInt(0), row.getInt(1), row.getDouble(2), row.getDouble(3),
+                if (row.getDouble(4) == 0.0)
+                    getAverageAge(trainingAgeAverages, row.getDouble(2), row.getDouble(3))
+                else
+                    row.getDouble(4)
+            )
+        }
+
+        trainingDataImputed
     }
 
 
