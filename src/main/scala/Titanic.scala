@@ -79,7 +79,7 @@ object Titanic {
     }
 
 
-    def prepGenderClassAgeData() = {
+    def prepGenderClassAgeData(): (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
@@ -102,7 +102,34 @@ object Titanic {
             )
         }
 
-        trainingDataImputed
+        val trainingFeatures = trainingDataImputed.map(rowArray =>
+            LabeledPoint(rowArray(1).toInt, Vectors.dense(rowArray(2), rowArray(3), rowArray(4)))).cache()
+
+        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("AgeMash", ageUDF(testCSV("Age")))
+                .select("Id", "Class", "Gender", "AgeMash")
+
+        val testAgeAverages = testDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
+
+        val testDataImputed = testDataCasted.rdd.map { row =>
+            Array(row.getInt(0), row.getDouble(1), row.getDouble(2),
+                if (row.getDouble(3) == 0.0)
+                    getAverageAge(testAgeAverages, row.getDouble(1), row.getDouble(2))
+                else
+                    row.getDouble(3)
+            )
+        }
+
+        val testFeatures = testDataImputed.map(rowArray =>
+            (rowArray(0).toInt, Vectors.dense(rowArray(1), rowArray(2), rowArray(3))))
+
+        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
     }
 
 
