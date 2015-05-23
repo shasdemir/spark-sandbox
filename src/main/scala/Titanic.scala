@@ -31,6 +31,7 @@ object TitanicUDFs {
 
 
 case class TitanicResult(PassengerId: Int, Survived: Int)
+case class ClassGenderAge(Class: Double, Gender: Double, AgeMash: Option[Double])
 
 
 object Titanic {
@@ -93,18 +94,6 @@ object Titanic {
                 .withColumn("AgeMash", ageUDF(trainingCSV("Age")))
                 .select("Id", "Survival", "Class", "Gender", "AgeMash").cache()
 
-        // DataFrame.unionAll() ignores columns with missing values, so I have to calculate the combined age averages
-        val trainingAgeAverages = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
-        val trainingAgeSums
-
-
-
-
-
-
-
-
-
         val testDataCasted = testCSV
                 .withColumn("Id", toInt(testCSV("PassengerId")))
                 .withColumn("Class", classUDF(testCSV("Pclass")))
@@ -112,10 +101,20 @@ object Titanic {
                 .withColumn("AgeMash", ageUDF(testCSV("Age")))
                 .select("Id", "Class", "Gender", "AgeMash").cache()
 
-        val allDataCasted = trainingDataCasted.unionAll(testDataCasted).cache()
+        // DataFrame.unionAll() ignores columns with missing values, so I will to calculate the combined age averages
+        // by converting to RDD, merge, then make DF again
+        val allAgeDataRDD = trainingDataCasted.select("Class", "Gender", "AgeMash").rdd.union(
+            testDataCasted.select("Class", "Gender", "AgeMash").rdd)
+        // toDF implicit conversion doesnt seem to be working for an RDD of Row objects. needed to create an RDD of a
+        // case class:
+        val allAgeDataDF = allAgeDataRDD.map(row =>
+            new ClassGenderAge(Class=row.getDouble(0),
+                               Gender=row.getDouble(1),
+                               AgeMash=if (row.isNullAt(2)) None else Some(row.getDouble(2)))).toDF()
 
-        val trainingAgeAverages = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
-        val allAgeAverages = allDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
+        val allAgeAverages = allAgeDataDF.groupBy("Class", "Gender").avg("AgeMash").cache()
+
+
 
         def getAverageAge(ageAveragesData: Array[Row], Class: Double, Gender: Double): Double =  // to impute for age
             ageAveragesData.filter(row => row.getDouble(0) == Class && row.getDouble(1) == Gender)(0).getDouble(2)
