@@ -82,7 +82,7 @@ object Titanic {
 
     def prepGenderClassAgeData(): (RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
         // lets not do validation or real testing this time. will just use age averages from all data, train on all
-        // training data, submit results for testing data
+        // training and testing data, submit results for testing data
 
         // so both trainingFeatures and testFeatures will have imputed AgeMash variables as average of class and sex
 
@@ -101,53 +101,30 @@ object Titanic {
                 .withColumn("AgeMash", ageUDF(testCSV("Age")))
                 .select("Id", "Class", "Gender", "AgeMash").cache()
 
-        // DataFrame.unionAll() ignores columns with missing values, so I will to calculate the combined age averages
+        // DataFrame.unionAll() ignores columns with missing values, so I will calculate the combined age averages
         // by converting to RDD, merge, then make DF again
         val allAgeDataRDD = trainingDataCasted.select("Class", "Gender", "AgeMash").rdd.union(
             testDataCasted.select("Class", "Gender", "AgeMash").rdd)
-        // toDF implicit conversion doesnt seem to be working for an RDD of Row objects. needed to create an RDD of a
+        // toDF implicit conversion doesn't seem to be working for an RDD of Row objects. needed to create an RDD of a
         // case class:
         val allAgeDataDF = allAgeDataRDD.map(row =>
             new ClassGenderAge(Class=row.getDouble(0),
                                Gender=row.getDouble(1),
                                AgeMash=if (row.isNullAt(2)) None else Some(row.getDouble(2)))).toDF()
 
-        val allAgeAverages = allAgeDataDF.groupBy("Class", "Gender").avg("AgeMash").cache()
+        val allAgeAverages = allAgeDataDF.groupBy("Class", "Gender").avg("AgeMash").collect()
+                .map(row => (row.getDouble(0), row.getDouble(1)) -> row.getDouble(2)).toMap
 
+        val trainingFeatures = trainingDataCasted.rdd.map { row =>
+            val pSurvived = row.getInt(1)
+            val pClass = row.getDouble(2)
+            val pGender = row.getDouble(3)
+            val pAge = if (row.isNullAt(4)) allAgeAverages((pClass, pGender)) else row.getDouble(4)
 
+            LabeledPoint(pSurvived, Vectors.dense(pClass, pGender, pAge))
+        }.cache()
 
-        def getAverageAge(ageAveragesData: Array[Row], Class: Double, Gender: Double): Double =  // to impute for age
-            ageAveragesData.filter(row => row.getDouble(0) == Class && row.getDouble(1) == Gender)(0).getDouble(2)
-
-        val trainingDataImputed = trainingDataCasted.rdd.map { row =>
-            Array(row.getInt(0), row.getInt(1), row.getDouble(2), row.getDouble(3),
-                if (row.getDouble(4) == 0.0)
-                    getAverageAge(trainingAgeAverages, row.getDouble(2), row.getDouble(3))
-                else
-                    row.getDouble(4)
-            )
-        }
-
-        val trainingFeatures = trainingDataImputed.map(rowArray =>
-            LabeledPoint(rowArray(1).toInt, Vectors.dense(rowArray(2), rowArray(3), rowArray(4)))).cache()
-
-
-
-
-
-        val testAgeAverages = testDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
-
-        val testDataImputed = testDataCasted.rdd.map { row =>
-            Array(row.getInt(0), row.getDouble(1), row.getDouble(2),
-                if (row.getDouble(3) == 0.0)
-                    getAverageAge(testAgeAverages, row.getDouble(1), row.getDouble(2))
-                else
-                    row.getDouble(3)
-            )
-        }
-
-        val testFeatures = testDataImputed.map(rowArray =>
-            (rowArray(0).toInt, Vectors.dense(rowArray(1), rowArray(2), rowArray(3))))
+        
 
         (trainingFeatures, testFeatures)
     }
