@@ -26,7 +26,7 @@ object TitanicUDFs {
     val toInt = udf[Int, String](_.toInt)
     val classUDF = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
     val genderUDF = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
-    val ageUDF = udf[Double, String](rawAge => if (rawAge == "") 0.0 else rawAge.toDouble)
+    val ageUDF = udf[Option[Double], String](rawAge => if (rawAge == "") None else Some(rawAge.toDouble))
 }
 
 
@@ -130,6 +130,8 @@ object Titanic {
             (rowArray(0).toInt, Vectors.dense(rowArray(1), rowArray(2), rowArray(3))))
 
         (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
+
+        // nononono, we need to handle missing values and averages should come froma all the data
     }
 
 
