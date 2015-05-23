@@ -79,7 +79,12 @@ object Titanic {
     }
 
 
-    def prepGenderClassAgeData(): (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
+    def prepGenderClassAgeData(): (RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
+        // lets not do validation or real testing this time. will just use age averages from all data, train on all
+        // training data, submit results for testing data
+
+        // so both trainingFeatures and testFeatures will have imputed AgeMash variables as average of class and sex
+
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
@@ -88,7 +93,29 @@ object Titanic {
                 .withColumn("AgeMash", ageUDF(trainingCSV("Age")))
                 .select("Id", "Survival", "Class", "Gender", "AgeMash").cache()
 
+        // DataFrame.unionAll() ignores columns with missing values, so I have to calculate the combined age averages
         val trainingAgeAverages = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
+        val trainingAgeSums
+
+
+
+
+
+
+
+
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("AgeMash", ageUDF(testCSV("Age")))
+                .select("Id", "Class", "Gender", "AgeMash").cache()
+
+        val allDataCasted = trainingDataCasted.unionAll(testDataCasted).cache()
+
+        val trainingAgeAverages = trainingDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
+        val allAgeAverages = allDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
 
         def getAverageAge(ageAveragesData: Array[Row], Class: Double, Gender: Double): Double =  // to impute for age
             ageAveragesData.filter(row => row.getDouble(0) == Class && row.getDouble(1) == Gender)(0).getDouble(2)
@@ -105,15 +132,9 @@ object Titanic {
         val trainingFeatures = trainingDataImputed.map(rowArray =>
             LabeledPoint(rowArray(1).toInt, Vectors.dense(rowArray(2), rowArray(3), rowArray(4)))).cache()
 
-        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
-        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
 
-        val testDataCasted = testCSV
-                .withColumn("Id", toInt(testCSV("PassengerId")))
-                .withColumn("Class", classUDF(testCSV("Pclass")))
-                .withColumn("Gender", genderUDF(testCSV("Sex")))
-                .withColumn("AgeMash", ageUDF(testCSV("Age")))
-                .select("Id", "Class", "Gender", "AgeMash")
+
+
 
         val testAgeAverages = testDataCasted.groupBy("Class", "Gender").avg("AgeMash").rdd.collect()
 
@@ -129,9 +150,7 @@ object Titanic {
         val testFeatures = testDataImputed.map(rowArray =>
             (rowArray(0).toInt, Vectors.dense(rowArray(1), rowArray(2), rowArray(3))))
 
-        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
-
-        // nononono, we need to handle missing values and averages should come froma all the data
+        (trainingFeatures, testFeatures)
     }
 
 
