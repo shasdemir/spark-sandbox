@@ -115,7 +115,7 @@ object Titanic {
         val allAgeAverages = allAgeDataDF.groupBy("Class", "Gender").avg("AgeMash").collect()
                 .map(row => (row.getDouble(0), row.getDouble(1)) -> row.getDouble(2)).toMap
 
-        val trainingFeatures = trainingDataCasted.rdd.map { row =>
+        val trainingFeatures = trainingDataCasted.map { row =>
             val pSurvived = row.getInt(1)
             val pClass = row.getDouble(2)
             val pGender = row.getDouble(3)
@@ -124,7 +124,14 @@ object Titanic {
             LabeledPoint(pSurvived, Vectors.dense(pClass, pGender, pAge))
         }.cache()
 
-        
+        val testFeatures = testDataCasted.map { row =>
+            val pId = row.getInt(0)
+            val pClass = row.getDouble(1)
+            val pGender = row.getDouble(2)
+            val pAge = if (row.isNullAt(3)) allAgeAverages((pClass, pGender)) else row.getDouble(3)
+
+            (pId, Vectors.dense(pClass, pGender, pAge))
+        }.cache()
 
         (trainingFeatures, testFeatures)
     }
@@ -135,7 +142,7 @@ object Titanic {
 
         val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
                 .run(initialTrainingFeatures)
-        println("initialLRModel weights: " + initialLRModel.weights + initialLRModel.intercept)
+        println("initialLRModel weights: " + initialLRModel.weights + " " + initialLRModel.intercept)
 
         val LRValidationResults = validationFeatures.map {
             case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
@@ -144,10 +151,10 @@ object Titanic {
         val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
                 LRValidationResults.count()
 
-        println("Logistic Regression classification error rate: " + classificationError)
+        println("GenderClassLRModel classification error rate: " + classificationError)
         val validationMetrics = new MulticlassMetrics(LRValidationResults)
-        println("Logistic Regression precision: " + validationMetrics.precision)
-        println("Logistic Regression recall: " + validationMetrics.recall)
+        println("GenderClassLRModel precision: " + validationMetrics.precision)
+        println("GenderClassLRModel recall: " + validationMetrics.recall)
 
         // train full model
         val LRGenderClassModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
@@ -158,19 +165,36 @@ object Titanic {
             case (idInt, fVector) => (idInt, LRGenderClassModel.predict(fVector).toInt)
         }.cache()
 
-        println(LRGenderClassResults.count())
-        println(LRGenderClassResults.take(10).mkString("\n"))
-        println("LRGenderClassModel weights: " + LRGenderClassModel.weights + LRGenderClassModel.intercept)
+//        println(LRGenderClassResults.count())
+//        println(LRGenderClassResults.take(10).mkString("\n"))
+        println("GenderClassLRModel weights: " + LRGenderClassModel.weights + " " + LRGenderClassModel.intercept)
 
         // save results to csv
         val LRGCResultDF = LRGenderClassResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
-        LRGCResultDF.show()
-        //LRGCResultDF.saveAsCsvFile(resultsFolder + "LRGenderClassResults")  // to submit to kaggle: merge files and header row
+        // LRGCResultDF.show()
+        LRGCResultDF.saveAsCsvFile(resultsFolder + "LRGenderClassResults")  // to submit to kaggle: merge files and header row
+    }
+
+
+    def runGenderClassAgeLRModel(): Unit = {
+        val (trainingFeatures, testFeatures) = prepGenderClassAgeData()
+
+        val LRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+            .run(trainingFeatures)
+
+        println("GenderClassAgeLRModel weights: " + LRModel.weights + " " + LRModel.intercept)
+
+        val testResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, LRModel.predict(fVector).toInt)
+        }.cache()
+
+        val testResultsDF = testResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+        testResultsDF.saveAsCsvFile(resultsFolder + "LRGenderClassAgeResults")
     }
 
 
     def main(args: Array[String]): Unit = {
         runGenderClassLRModel()
-
+        runGenderClassAgeLRModel()
     }
 }
