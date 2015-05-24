@@ -24,6 +24,7 @@ object FilePaths {
 
 object TitanicUDFs {
     val toInt = udf[Int, String](_.toInt)
+    val toDouble = udf[Double, String](_.toDouble)
     val classUDF = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
     val genderUDF = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
     val ageUDF = udf[Option[Double], String](rawAge => if (rawAge == "") None else Some(rawAge.toDouble))
@@ -72,6 +73,35 @@ object Titanic {
         val trainingFeatures = trainingDataCasted.map(row =>
             LabeledPoint(row.getInt(1), Vectors.dense(row.getDouble(2), row.getDouble(3)))).cache() // label, features
         val testFeatures = testDataCasted.map(row => (row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2)))) // id, features
+
+        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+
+        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
+    }
+
+
+    def prepGenderClassSibSpData(): (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
+        val trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(trainingCSV("SibSp")))
+                .select("Id", "Survival", "Class", "Gender", "SibSpouse")
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(testCSV("SibSp")))
+                .select("Id", "Class", "Gender", "SibSpouse")
+
+        val trainingFeatures = trainingDataCasted.map(row =>
+            LabeledPoint(row.getInt(1), Vectors.dense(row.getDouble(2), row.getDouble(3), row.getDouble(4)))).cache()
+
+        val testFeatures = testDataCasted.map(row =>
+            (row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2), row.getDouble(3))))
 
         val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
         val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
