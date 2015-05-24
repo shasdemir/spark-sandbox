@@ -265,5 +265,6 @@ object Titanic {
     def main(args: Array[String]): Unit = {
         runGenderClassLRModel()
         runGenderClassAgeLRModel()
+        runGenderClassSibSpLRModel()
     }
 }
