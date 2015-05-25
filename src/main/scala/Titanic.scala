@@ -217,17 +217,19 @@ object Titanic {
         println("initial" + outputFolderName + " recall: " + validationMetrics.recall)
 
         // train full model
-        val LRGenderClassModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+        val LRFullModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
                 .run(trainingFeatures)
 
         // evaluate over test data
-        val LRGenderClassResults = testFeatures.map {
-            case (idInt, fVector) => (idInt, LRGenderClassModel.predict(fVector).toInt)
+        val LRFullResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, LRFullModel.predict(fVector).toInt)
         }.cache()
 
-        println(outputFolderName + " weights: " + LRGenderClassModel.weights + " " + LRGenderClassModel.intercept)
-        val LRGCSSResultDF = LRGenderClassResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
-        LRGCSSResultDF.saveAsCsvFile(resultsFolder + outputFolderName)
+        println(outputFolderName + " weights: " + LRFullModel.weights + " " + LRFullModel.intercept)
+        val LRResultsDF = LRFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+
+        LRResultsDF.show()
+        //LRGCSSResultDF.saveAsCsvFile(resultsFolder + outputFolderName)
     }
 
 
@@ -254,5 +256,6 @@ object Titanic {
 
         runLRModels(prepGenderClassData, "LRGenderClassResults")
         runLRModels(prepGenderClassSibSpData, "LRGenderClassSibSpResults")
+        runLRModels(prepGenderClassSibSpParchFareData, "LRGenderClassSibSpParchFareResults")
     }
 }
