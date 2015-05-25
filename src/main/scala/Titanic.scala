@@ -42,21 +42,15 @@ object Titanic {
     import sqlContext.implicits._
 
     type SparkVector = org.apache.spark.mllib.linalg.Vector
-
-    import FilePaths._
-    val (trainingCSV, testCSV) = loadTrainingAndTestData()
+    type fullDataTuple = (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)])
 
     import TitanicUDFs._
+    import FilePaths._
+    val trainingCSV = sqlContext.csvFile(trainDataFile, useHeader = true).cache()
+    val testCSV = sqlContext.csvFile(testDataFile, useHeader = true).cache()
 
 
-    def loadTrainingAndTestData(): (DataFrame, DataFrame) = {
-        val trainingCSV = sqlContext.csvFile(trainDataFile, useHeader = true).cache()
-        val testCSV = sqlContext.csvFile(testDataFile, useHeader = true).cache()
-        (trainingCSV, testCSV)
-    }
-
-
-    def prepGenderClassData(): (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
+    def prepGenderClassData(): fullDataTuple = {
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
@@ -81,7 +75,7 @@ object Titanic {
     }
 
 
-    def prepGenderClassSibSpData(): (RDD[LabeledPoint], RDD[LabeledPoint], RDD[LabeledPoint], RDD[(Int, SparkVector)]) = {
+    def prepGenderClassSibSpData(): fullDataTuple = {
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
                 .withColumn("Survival", toInt(trainingCSV("Survived")))
@@ -102,6 +96,41 @@ object Titanic {
 
         val testFeatures = testDataCasted.map(row =>
             (row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2), row.getDouble(3))))
+
+        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+
+        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
+    }
+
+
+    def prepGenderClassSibSpParchFareData(): (fullDataTuple) = {
+        val trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(trainingCSV("SibSp")))
+                .withColumn("ParCh", toDouble(trainingCSV("Parch")))
+                .withColumn("Price", toDouble(trainingCSV("Fare")))
+                .select("Id", "Survival", "Class", "Gender", "SibSpouse", "ParCh", "Price")
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(testCSV("SibSp")))
+                .withColumn("ParCh", toDouble(testCSV("Parch")))
+                .withColumn("Price", toDouble(testCSV("Fare")))
+                .select("Id", "Class", "Gender", "SibSpouse", "ParCh", "Price")
+
+        val trainingFeatures = trainingDataCasted.map(row =>
+            LabeledPoint(row.getInt(1), Vectors.dense(row.getDouble(2), row.getDouble(3), row.getDouble(4),
+                row.getDouble(5), row.getDouble(6)))).cache()
+
+        val testFeatures = testDataCasted.map(row =>
+            (row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2), row.getDouble(3), row.getDouble(4),
+                row.getDouble(5))))
 
         val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
         val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
@@ -208,7 +237,7 @@ object Titanic {
 
 
     def runGenderClassSibSpLRModel(): Unit = {
-        // copy of runGenderClassLRModel except data input function and output folder. may merge thse two later...
+        // identical to runGenderClassLRModel except data input function and output folder. may merge thse two later...
 
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassSibSpData()
 
