@@ -166,6 +166,62 @@ object Titanic {
     }
 
 
+    def prepGenderClassSibSpFareData(): fullDataTuple = {
+        val trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(trainingCSV("SibSp")))
+                .withColumn("Price", fareUDF(trainingCSV("Fare")))
+                .select("Id", "Survival", "Class", "Gender", "SibSpouse", "Price")
+
+        val testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(testCSV("SibSp")))
+                .withColumn("Price", fareUDF(testCSV("Fare")))
+                .select("Id", "Class", "Gender", "SibSpouse", "Price")
+
+        // Price can be missing. Fill in average price by class instead.
+        val allPriceData = trainingDataCasted.select("Class", "Price").rdd.union(
+            testDataCasted.select("Class", "Price").rdd)
+
+        val allPriceDF = allPriceData.map(row =>
+            new ClassPrice(Class=row.getDouble(0), Price=if (row.isNullAt(1)) None else Some(row.getDouble(1)))
+        ).toDF()
+
+        val allPriceAverages = allPriceDF.groupBy("Class").avg("Price").collect()
+                .map(row => (row.getDouble(0), row.getDouble(1))).toMap
+
+        val trainingFeatures = trainingDataCasted.map { row =>
+            val pSurvival = row.getInt(1)
+            val pClass = row.getDouble(2)
+            val pGender = row.getDouble(3)
+            val pSibSpouse = row.getDouble(4)
+            val pPrice = if (row.isNullAt(5)) allPriceAverages(pClass) else row.getDouble(5)
+
+            LabeledPoint(pSurvival, Vectors.dense(pClass, pGender, pSibSpouse, pPrice))
+        }.cache()
+
+        val testFeatures = testDataCasted.map { row =>
+            val pId = row.getInt(0)
+            val pClass = row.getDouble(1)
+            val pGender = row.getDouble(2)
+            val pSibSpouse = row.getDouble(3)
+            val pPrice = if (row.isNullAt(4)) allPriceAverages(pClass) else row.getDouble(4)
+
+            (pId, Vectors.dense(pClass, pGender, pSibSpouse, pPrice))
+        }
+
+        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+
+        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
+    }
+
+
     def prepGenderClassFareData(): fullDataTuple = {
         val trainingDataCasted = trainingCSV
                 .withColumn("Id", toInt(trainingCSV("PassengerId")))
@@ -337,5 +393,6 @@ object Titanic {
         runLRModels(prepGenderClassSibSpData, "LRGenderClassSibSpResults")
         runLRModels(prepGenderClassSibSpParchFareData, "LRGenderClassSibSpParchFareResults")
         runLRModels(prepGenderClassFareData, "LRGenderClassFareResults")
+        runLRModels(prepGenderClassSibSpFareData, "LRGenderClassSibSpFareResults")
     }
 }
