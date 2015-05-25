@@ -28,11 +28,13 @@ object TitanicUDFs {
     val classUDF = udf[Double, String](_.toDouble - 1.0)  // categorical variables start from 0 in MLLib
     val genderUDF = udf[Double, String](gen => if (gen == "male") 1.0 else 0.0)
     val ageUDF = udf[Option[Double], String](rawAge => if (rawAge == "") None else Some(rawAge.toDouble))
+    val fareUDF = udf[Option[Double], String](rawPrice => if (rawPrice == "") None else Some(rawPrice.toDouble))
 }
 
 
 case class TitanicResult(PassengerId: Int, Survived: Int)
 case class ClassGenderAge(Class: Double, Gender: Double, AgeMash: Option[Double])
+case class ClassPrice(Class: Double, Price: Option[Double])
 
 
 object Titanic {
@@ -112,7 +114,7 @@ object Titanic {
                 .withColumn("Gender", genderUDF(trainingCSV("Sex")))
                 .withColumn("SibSpouse", toDouble(trainingCSV("SibSp")))
                 .withColumn("ParCh", toDouble(trainingCSV("Parch")))
-                .withColumn("Price", toDouble(trainingCSV("Fare")))
+                .withColumn("Price", fareUDF(trainingCSV("Fare")))
                 .select("Id", "Survival", "Class", "Gender", "SibSpouse", "ParCh", "Price")
 
         val testDataCasted = testCSV
@@ -121,16 +123,41 @@ object Titanic {
                 .withColumn("Gender", genderUDF(testCSV("Sex")))
                 .withColumn("SibSpouse", toDouble(testCSV("SibSp")))
                 .withColumn("ParCh", toDouble(testCSV("Parch")))
-                .withColumn("Price", toDouble(testCSV("Fare")))
+                .withColumn("Price", fareUDF(testCSV("Fare")))
                 .select("Id", "Class", "Gender", "SibSpouse", "ParCh", "Price")
 
-        val trainingFeatures = trainingDataCasted.map(row =>
-            LabeledPoint(row.getInt(1), Vectors.dense(row.getDouble(2), row.getDouble(3), row.getDouble(4),
-                row.getDouble(5), row.getDouble(6)))).cache()
+        // Price can be missing. Fill in average price by class instead.
+        val allPriceData = trainingDataCasted.select("Class", "Price").rdd.union(
+            testDataCasted.select("Class", "Price").rdd)
 
-        val testFeatures = testDataCasted.map(row =>
-            (row.getInt(0), Vectors.dense(row.getDouble(1), row.getDouble(2), row.getDouble(3), row.getDouble(4),
-                row.getDouble(5))))
+        val allPriceDF = allPriceData.map(row =>
+            new ClassPrice(Class=row.getDouble(0), Price=if (row.isNullAt(1)) None else Some(row.getDouble(1)))
+        ).toDF()
+
+        val allPriceAverages = allPriceDF.groupBy("Class").avg("Price").collect()
+            .map(row => (row.getDouble(0), row.getDouble(1))).toMap
+
+        val trainingFeatures = trainingDataCasted.map { row =>
+            val pSurvival = row.getInt(1)
+            val pClass = row.getDouble(2)
+            val pGender = row.getDouble(3)
+            val pSibSpouse = row.getDouble(4)
+            val pParCh = row.getDouble(5)
+            val pPrice = if (row.isNullAt(6)) allPriceAverages(pClass) else row.getDouble(6)
+
+            LabeledPoint(pSurvival, Vectors.dense(pClass, pGender, pSibSpouse, pParCh, pPrice))
+        }.cache()
+
+        val testFeatures = testDataCasted.map { row =>
+            val pId = row.getInt(0)
+            val pClass = row.getDouble(1)
+            val pGender = row.getDouble(2)
+            val pSibSpouse = row.getDouble(3)
+            val pParCh = row.getDouble(4)
+            val pPrice = if (row.isNullAt(5)) allPriceAverages(pClass) else row.getDouble(5)
+
+            (pId, Vectors.dense(pClass, pGender, pSibSpouse, pParCh, pPrice))
+        }
 
         val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
         val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
@@ -229,7 +256,7 @@ object Titanic {
         val LRResultsDF = LRFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
 
         LRResultsDF.show()
-        //LRGCSSResultDF.saveAsCsvFile(resultsFolder + outputFolderName)
+        LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
     }
 
 
