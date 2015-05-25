@@ -237,7 +237,7 @@ object Titanic {
 
 
     def runGenderClassSibSpLRModel(): Unit = {
-        // identical to runGenderClassLRModel except data input function and output folder. may merge thse two later...
+        // identical to runGenderClassLRModel except data input function and output folder. may merge these two later...
 
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassSibSpData()
 
@@ -273,6 +273,43 @@ object Titanic {
     }
 
 
+    def runLRModels(dataInputFunction: () => fullDataTuple, outputFolderName: String): Unit = {
+        // identical to runGenderClassLRModel except data input function and output folder.
+
+        val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = dataInputFunction()
+
+        val initialLRModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(initialTrainingFeatures)
+        println("*********")
+        println(outputFolderName + " weights: " + initialLRModel.weights + " " + initialLRModel.intercept)
+
+        val LRValidationResults = validationFeatures.map {
+            case LabeledPoint(label, features) => (initialLRModel.predict(features), label)
+        }.cache()
+
+        val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
+                LRValidationResults.count()
+
+        println("initial" + outputFolderName + " classification error rate: " + classificationError)
+        val validationMetrics = new MulticlassMetrics(LRValidationResults)
+        println("initial" + outputFolderName + " precision: " + validationMetrics.precision)
+        println("initial" + outputFolderName + " recall: " + validationMetrics.recall)
+
+        // train full model
+        val LRGenderClassModel = new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(trainingFeatures)
+
+        // evaluate over test data
+        val LRGenderClassResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, LRGenderClassModel.predict(fVector).toInt)
+        }.cache()
+
+        println(outputFolderName + " weights: " + LRGenderClassModel.weights + " " + LRGenderClassModel.intercept)
+        val LRGCSSResultDF = LRGenderClassResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+        LRGCSSResultDF.saveAsCsvFile(resultsFolder + outputFolderName)
+    }
+
+
     def runGenderClassAgeLRModel(): Unit = {
         val (trainingFeatures, testFeatures) = prepGenderClassAgeData()
 
@@ -295,5 +332,9 @@ object Titanic {
         runGenderClassLRModel()
         runGenderClassAgeLRModel()
         runGenderClassSibSpLRModel()
+
+        println("*********")
+        println("Trial of runLRModels: This output should be the same as GenderClassSibSpLRModel:")
+        runLRModels(prepGenderClassSibSpData, "LRGenderClassSibSpResults")
     }
 }
