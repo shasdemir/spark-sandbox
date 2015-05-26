@@ -423,6 +423,7 @@ object Titanic {
 
     def runGenderClassFamilyDTModel(): Unit = {
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassFamilyData()
+        val outputFolderName = "DTGenderClassFamilyModel"
 
         val numClasses = 2
         val impurity = "gini"
@@ -444,6 +445,21 @@ object Titanic {
         println("ClassGenderFamilySize Decision Tree validation error rate: " + validationError)
         println("ClassGenderFamilySize Decision Tree precision: " + validationMetrics.precision)
         println("ClassGenderFamilySize Decision Tree recall: " + validationMetrics.recall)
+
+        // train full model
+        val fullModel = DecisionTree.trainClassifier(trainingFeatures, numClasses, categoricalFeaturesInfo, impurity,
+            maxDepth, maxBins)
+
+        // evaluate over test data
+        val DTFullResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, fullModel.predict(fVector).toInt)
+        }.cache()
+
+        //println(outputFolderName + " learned model: " + fullModel.toDebugString)
+        val DTResultsDF = DTFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+
+        DTResultsDF.show()
+        DTResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
     }
 
 
