@@ -5,7 +5,7 @@ import org.apache.spark.rdd.RDD
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
+import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
 import org.apache.spark.sql.{DataFrame, SQLContext, Column}
@@ -417,6 +417,72 @@ object Titanic {
     }
 
 
+    def runSeparateGenderModels(dataInputFunction: () => fullDataTuple, outputFolderName: String): Unit = {
+        val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = dataInputFunction()
+
+        // assuming Gender is at position 1 at the training and testing data features
+        val initialMaleFeatures = initialTrainingFeatures.filter(point => point.features(3) == 1)
+        val initialFemaleFeatures = initialTrainingFeatures.filter(point => point.features(3) == 0)
+
+        val trainingMaleFeatures = trainingFeatures.filter(point => point.features(3) == 1)
+        val trainingFemaleFeatures = trainingFeatures.filter(point => point.features(3) == 0)
+
+        class DoubleLRModels(maleModel: LogisticRegressionModel,femaleModel: LogisticRegressionModel) {
+            def predict(dataPoint: org.apache.spark.mllib.linalg.Vector): Double = {
+                val dataPointGender = dataPoint(2)
+
+                if (dataPointGender == 0)
+                    femaleModel.predict(dataPoint)
+                else
+                    maleModel.predict(dataPoint)
+            }
+
+            def weights = "Male model weights: " + maleModel.weights + "\nFemale model weights: " + femaleModel.weights
+            def intercept = "Male model intercept: " + maleModel.intercept + "\nFemale model intercept: "
+                + femaleModel.intercept
+        }
+
+        val initialMaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(initialMaleFeatures)
+        val initialFemaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(initialFemaleFeatures)
+
+        val initialDoubleModels = new DoubleLRModels(initialMaleModel, initialFemaleModel)
+
+        val LRValidationResults = validationFeatures.map {
+            case LabeledPoint(label, features) => (initialDoubleModels.predict(features), label)
+        }.cache()
+
+        val classificationError = LRValidationResults.filter(tuple => tuple._1 != tuple._2).count().toDouble /
+                LRValidationResults.count()
+
+        println("initial" + outputFolderName + " classification error rate: " + classificationError)
+        val validationMetrics = new MulticlassMetrics(LRValidationResults)
+        println("initial" + outputFolderName + " precision: " + validationMetrics.precision)
+        println("initial" + outputFolderName + " recall: " + validationMetrics.recall)
+
+        // train the model on all training data
+        val fulllMaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(trainingMaleFeatures)
+        val fullFemaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
+                .run(trainingFemaleFeatures)
+
+        val fullDoubleModels = new DoubleLRModels(fulllMaleModel, fullFemaleModel)
+
+        // evaluate over test data
+        val LRFullResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, fullDoubleModels.predict(fVector).toInt)
+        }.cache()
+
+        println(outputFolderName + " weights: " + fullDoubleModels.weights + " " + fullDoubleModels.intercept)
+        val LRResultsDF = LRFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+
+        LRResultsDF.show()
+        LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
+
+    }
+
+
     def runGenderClassAgeLRModel(): Unit = {
         val (trainingFeatures, testFeatures) = prepGenderClassAgeData()
 
@@ -444,5 +510,7 @@ object Titanic {
         runLRModels(prepGenderClassFareData, "LRGenderClassFareResults")
         runLRModels(prepGenderClassSibSpFareData, "LRGenderClassSibSpFareResults")
         runLRModels(prepGenderClassFamilyData, "LRGenderClassFamilyModel")
+
+        runSeparateGenderModels(prepGenderClassFamilyData, "LRGenderClassFamilyModelSEP")
     }
 }
