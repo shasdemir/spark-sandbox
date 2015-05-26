@@ -442,9 +442,9 @@ object Titanic {
         }
 
         val initialMaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
-                .run(initialMaleFeatures)
+                .run(initialMaleFeatures).setThreshold(0.5)
         val initialFemaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
-                .run(initialFemaleFeatures)
+                .run(initialFemaleFeatures).setThreshold(0.5)
 
         val initialDoubleModels = new DoubleLRModels(initialMaleModel, initialFemaleModel)
 
@@ -477,7 +477,7 @@ object Titanic {
         val LRResultsDF = LRFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
 
         LRResultsDF.show()
-        LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
+        //LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
 
     }
 
@@ -501,14 +501,14 @@ object Titanic {
 
 
     def main(args: Array[String]): Unit = {
-        runGenderClassAgeLRModel()
-
-        runLRModels(prepGenderClassData, "LRGenderClassResults")
-        runLRModels(prepGenderClassSibSpData, "LRGenderClassSibSpResults")
-        runLRModels(prepGenderClassSibSpParchFareData, "LRGenderClassSibSpParchFareResults")
-        runLRModels(prepGenderClassFareData, "LRGenderClassFareResults")
-        runLRModels(prepGenderClassSibSpFareData, "LRGenderClassSibSpFareResults")
-        runLRModels(prepGenderClassFamilyData, "LRGenderClassFamilyModel")
+//        runGenderClassAgeLRModel()
+//
+//        runLRModels(prepGenderClassData, "LRGenderClassResults")
+//        runLRModels(prepGenderClassSibSpData, "LRGenderClassSibSpResults")
+//        runLRModels(prepGenderClassSibSpParchFareData, "LRGenderClassSibSpParchFareResults")
+//        runLRModels(prepGenderClassFareData, "LRGenderClassFareResults")
+//        runLRModels(prepGenderClassSibSpFareData, "LRGenderClassSibSpFareResults")
+//        runLRModels(prepGenderClassFamilyData, "LRGenderClassFamilyModel")
 
         runSeparateGenderModels(prepGenderClassFamilyData, "LRGenderClassFamilyModelSEP")
     }
