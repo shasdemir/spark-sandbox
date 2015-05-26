@@ -421,15 +421,15 @@ object Titanic {
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = dataInputFunction()
 
         // assuming Gender is at position 1 at the training and testing data features
-        val initialMaleFeatures = initialTrainingFeatures.filter(point => point.features(3) == 1)
-        val initialFemaleFeatures = initialTrainingFeatures.filter(point => point.features(3) == 0)
+        val initialMaleFeatures = initialTrainingFeatures.filter(point => point.features(1) == 1).cache()
+        val initialFemaleFeatures = initialTrainingFeatures.filter(point => point.features(1) == 0).cache()
 
-        val trainingMaleFeatures = trainingFeatures.filter(point => point.features(3) == 1)
-        val trainingFemaleFeatures = trainingFeatures.filter(point => point.features(3) == 0)
+        val trainingMaleFeatures = trainingFeatures.filter(point => point.features(1) == 1).cache()
+        val trainingFemaleFeatures = trainingFeatures.filter(point => point.features(1) == 0).cache()
 
-        class DoubleLRModels(maleModel: LogisticRegressionModel,femaleModel: LogisticRegressionModel) {
+        class DoubleLRModels (maleModel: LogisticRegressionModel,femaleModel: LogisticRegressionModel) extends Serializable {
             def predict(dataPoint: org.apache.spark.mllib.linalg.Vector): Double = {
-                val dataPointGender = dataPoint(2)
+                val dataPointGender = dataPoint(1)
 
                 if (dataPointGender == 0)
                     femaleModel.predict(dataPoint)
@@ -437,9 +437,8 @@ object Titanic {
                     maleModel.predict(dataPoint)
             }
 
-            def weights = "Male model weights: " + maleModel.weights + "\nFemale model weights: " + femaleModel.weights
-            def intercept = "Male model intercept: " + maleModel.intercept + "\nFemale model intercept: "
-                + femaleModel.intercept
+            def weights = "Male model weights: " + maleModel.weights + "Female model weights: " + femaleModel.weights
+            def intercept = "Male model intercept: " + maleModel.intercept + "Female model intercept: " + femaleModel.intercept
         }
 
         val initialMaleModel =  new LogisticRegressionWithLBFGS().setNumClasses(2).setIntercept(true).setValidateData(true)
