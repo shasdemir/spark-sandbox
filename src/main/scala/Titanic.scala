@@ -9,8 +9,7 @@ import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticR
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
 import org.apache.spark.mllib.tree.DecisionTree
-import org.apache.spark.mllib.tree.model.DecisionTreeModel
-import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.mllib.tree.RandomForest
 
 import org.apache.spark.sql.{DataFrame, SQLContext, Column}
 import org.apache.spark.sql.functions._
@@ -427,7 +426,7 @@ object Titanic {
 
         val numClasses = 2
         val impurity = "gini"
-        val maxDepth = 5
+        val maxDepth = 3
         val maxBins = 32
         val categoricalFeaturesInfo = Map(0 -> 3, 1 -> 2)  // class and gender are categorical
         // LabeledPoint(pSurvival, Vectors.dense(pClass, pGender, pFamilySize))
@@ -455,11 +454,54 @@ object Titanic {
             case (idInt, fVector) => (idInt, fullModel.predict(fVector).toInt)
         }.cache()
 
-        //println(outputFolderName + " learned model: " + fullModel.toDebugString)
+        // println(outputFolderName + " learned model: " + fullModel.toDebugString)
         val DTResultsDF = DTFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
 
         DTResultsDF.show()
         DTResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
+    }
+
+
+    def runGenderClassFamilyRandomForestModel(): Unit = {
+        val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassFamilyData()
+        val outputFolderName = "RFGenderClassFamilyModel"
+
+        val numClasses = 2
+        val categoricalFeaturesInfo = Map(0 -> 3, 1 -> 2)  // class and gender are categorical
+        val numTrees = 5000
+        val featureSubsetStrategy = "auto"
+        val impurity = "gini"
+        val maxDepth = 10
+        val maxBins = 32
+
+        val validationModel = RandomForest.trainClassifier(initialTrainingFeatures, numClasses, categoricalFeaturesInfo,
+            numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+
+        val validationResults = validationFeatures.map(point => (validationModel.predict(point.features), point.label))
+
+        val validationError = validationResults.filter(tuple => tuple._1 != tuple._2)
+                .count().toDouble / validationResults.count()
+
+        val validationMetrics = new MulticlassMetrics(validationResults)
+
+        println("ClassGenderFamilySize Random Forest validation error rate: " + validationError)
+        println("ClassGenderFamilySize Random Forest precision: " + validationMetrics.precision)
+        println("ClassGenderFamilySize Random Forest recall: " + validationMetrics.recall)
+
+        // train full model
+        val fullModel = RandomForest.trainClassifier(trainingFeatures, numClasses, categoricalFeaturesInfo, numTrees,
+            featureSubsetStrategy, impurity, maxDepth, maxBins)
+
+        // evaluate over test data
+        val RFFullResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, fullModel.predict(fVector).toInt)
+        }.cache()
+
+        // println(outputFolderName + " learned model: " + fullModel.toDebugString)
+        val RFResultsDF = RFFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+
+        RFResultsDF.show()
+        RFResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
     }
 
 
@@ -523,7 +565,7 @@ object Titanic {
         val LRResultsDF = LRFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
 
         LRResultsDF.show()
-        //LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
+        LRResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
 
     }
 
@@ -558,6 +600,8 @@ object Titanic {
 
 //        runSeparateGenderModels(prepGenderClassFamilyData, "LRGenderClassFamilyModelSEP")
 
-        runGenderClassFamilyDTModel()
+//        runGenderClassFamilyDTModel()
+
+        runGenderClassFamilyRandomForestModel()
     }
 }
