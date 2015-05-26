@@ -8,6 +8,10 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.model.DecisionTreeModel
+import org.apache.spark.mllib.util.MLUtils
+
 import org.apache.spark.sql.{DataFrame, SQLContext, Column}
 import org.apache.spark.sql.functions._
 import com.databricks.spark.csv._
@@ -417,6 +421,32 @@ object Titanic {
     }
 
 
+    def runGenderClassFamilyDTModel(): Unit = {
+        val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassFamilyData()
+
+        val numClasses = 2
+        val impurity = "gini"
+        val maxDepth = 5
+        val maxBins = 32
+        val categoricalFeaturesInfo = Map(0 -> 3, 1 -> 2)  // class and gender are categorical
+        // LabeledPoint(pSurvival, Vectors.dense(pClass, pGender, pFamilySize))
+
+        val validationModel = DecisionTree.trainClassifier(initialTrainingFeatures, numClasses, categoricalFeaturesInfo,
+            impurity, maxDepth, maxBins)
+
+        val validationResults = validationFeatures.map(point => (validationModel.predict(point.features), point.label))
+
+        val validationError = validationResults.filter(tuple => tuple._1 != tuple._2)
+                .count().toDouble / validationResults.count()
+
+        val validationMetrics = new MulticlassMetrics(validationResults)
+
+        println("ClassGenderFamilySize Decision Tree validation error rate: " + validationError)
+        println("ClassGenderFamilySize Decision Tree precision: " + validationMetrics.precision)
+        println("ClassGenderFamilySize Decision Tree recall: " + validationMetrics.recall)
+    }
+
+
     def runSeparateGenderModels(dataInputFunction: () => fullDataTuple, outputFolderName: String): Unit = {
         val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = dataInputFunction()
 
@@ -510,6 +540,8 @@ object Titanic {
 //        runLRModels(prepGenderClassSibSpFareData, "LRGenderClassSibSpFareResults")
 //        runLRModels(prepGenderClassFamilyData, "LRGenderClassFamilyModel")
 
-        runSeparateGenderModels(prepGenderClassFamilyData, "LRGenderClassFamilyModelSEP")
+//        runSeparateGenderModels(prepGenderClassFamilyData, "LRGenderClassFamilyModelSEP")
+
+        runGenderClassFamilyDTModel()
     }
 }
