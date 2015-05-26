@@ -5,10 +5,10 @@ import org.apache.spark.rdd.RDD
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.mllib.classification.{LogisticRegressionWithLBFGS, LogisticRegressionModel}
+import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 
-import org.apache.spark.sql.{DataFrame, SQLContext, Row}
+import org.apache.spark.sql.{DataFrame, SQLContext, Column}
 import org.apache.spark.sql.functions._
 import com.databricks.spark.csv._
 
@@ -136,6 +136,70 @@ object Titanic {
 
         val allPriceAverages = allPriceDF.groupBy("Class").avg("Price").collect()
             .map(row => (row.getDouble(0), row.getDouble(1))).toMap
+
+        val trainingFeatures = trainingDataCasted.map { row =>
+            val pSurvival = row.getInt(1)
+            val pClass = row.getDouble(2)
+            val pGender = row.getDouble(3)
+            val pSibSpouse = row.getDouble(4)
+            val pParCh = row.getDouble(5)
+            val pPrice = if (row.isNullAt(6)) allPriceAverages(pClass) else row.getDouble(6)
+
+            LabeledPoint(pSurvival, Vectors.dense(pClass, pGender, pSibSpouse, pParCh, pPrice))
+        }.cache()
+
+        val testFeatures = testDataCasted.map { row =>
+            val pId = row.getInt(0)
+            val pClass = row.getDouble(1)
+            val pGender = row.getDouble(2)
+            val pSibSpouse = row.getDouble(3)
+            val pParCh = row.getDouble(4)
+            val pPrice = if (row.isNullAt(5)) allPriceAverages(pClass) else row.getDouble(5)
+
+            (pId, Vectors.dense(pClass, pGender, pSibSpouse, pParCh, pPrice))
+        }
+
+        val splits = trainingFeatures.randomSplit(Array(0.7, 0.3), seed=12345L)
+        val (initialTrainingFeatures, validationFeatures) = (splits(0).cache(), splits(1).cache())
+
+        (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures)
+    }
+
+
+    def prepGenderClassFamilyData(): fullDataTuple = {
+        val _trainingDataCasted = trainingCSV
+                .withColumn("Id", toInt(trainingCSV("PassengerId")))
+                .withColumn("Survival", toInt(trainingCSV("Survived")))
+                .withColumn("Class", classUDF(trainingCSV("Pclass")))
+                .withColumn("Gender", genderUDF(trainingCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(trainingCSV("SibSp")))
+                .withColumn("ParCh", toDouble(trainingCSV("Parch")))
+
+        val trainingDataCasted = _trainingDataCasted
+                .withColumn("FamilySize", _trainingDataCasted("SibSpouse") + _trainingDataCasted("ParCh"))
+                .select("Id", "Survival", "Class", "Gender", "FamilySize")
+
+        val _testDataCasted = testCSV
+                .withColumn("Id", toInt(testCSV("PassengerId")))
+                .withColumn("Class", classUDF(testCSV("Pclass")))
+                .withColumn("Gender", genderUDF(testCSV("Sex")))
+                .withColumn("SibSpouse", toDouble(testCSV("SibSp")))
+                .withColumn("ParCh", toDouble(testCSV("Parch")))
+
+        val testDataCasted = _testDataCasted
+                .withColumn("FamilySize", _testDataCasted("SibSpouse") + _testDataCasted("ParCh"))
+                .select("Id", "Class", "Gender", "FamilySize")
+
+        // Price can be missing. Fill in average price by class instead.
+        val allPriceData = trainingDataCasted.select("Class", "Price").rdd.union(
+            testDataCasted.select("Class", "Price").rdd)
+
+        val allPriceDF = allPriceData.map(row =>
+            new ClassPrice(Class=row.getDouble(0), Price=if (row.isNullAt(1)) None else Some(row.getDouble(1)))
+        ).toDF()
+
+        val allPriceAverages = allPriceDF.groupBy("Class").avg("Price").collect()
+                .map(row => (row.getDouble(0), row.getDouble(1))).toMap
 
         val trainingFeatures = trainingDataCasted.map { row =>
             val pSurvival = row.getInt(1)
