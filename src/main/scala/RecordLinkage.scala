@@ -31,20 +31,21 @@ object RecordLinkage {
 
             MatchData(id1, id2, scores, matched)
         }
-
-        val md = parseLine(line)
+        // val md = parseLine(line)
 
         val localMDS = head.filter(!isHeader(_)).map(parseLine)
         val parsed = noHeader.map(parseLine).cache()
         // data load done
 
         val localGrouped = localMDS.groupBy(_.matched)
-
         localGrouped.mapValues(_.length).foreach(println)
 
+        // histogram
         val matchCounts = parsed.map(_.matched).countByValue()
-
         val matchCountsSeq = matchCounts.toSeq
         matchCountsSeq.sortBy(_._2).reverse.foreach(println)
+
+        // summary statistics for continuous variables
+        parsed.map(_.scores(0)).filter(!_.isNaN).stats()
     }
 }
