@@ -12,8 +12,25 @@ object RecordLinkage {
     def main(args: Array[String]): Unit = {
         val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/RecordLinkage/Blocks"
         val rawBlocks = sc.textFile(dataFolder)
+        val head = rawBlocks.take(10)
+        val line = head(5)
 
-        def isHead(line: String) = line.contains("id_1")
-        val nonHeader = rawBlocks.filter(!isHead(_))
+        def isHeader(line: String) = line.contains("id_1")
+        val nonHeader = rawBlocks.filter(!isHeader(_))
+
+        def toDoubleNaN(s: String) = if (s == "?") Double.NaN else s.toDouble
+
+        def parseLine(line: String): (Int, Int, Array[Double], Boolean) = {
+            val pieces = line.split(",")
+            val (id1, id2) = (pieces(0).toInt, pieces(1).toInt)
+            val matched = pieces(11).toBoolean
+            val rawScores = pieces.slice(2, 11)
+            val scores = rawScores.map(toDoubleNaN)
+
+            (id1, id2, scores, matched)
+        }
+
+        val tup = parseLine(line)
+
     }
 }
