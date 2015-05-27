@@ -11,5 +11,9 @@ object RecordLinkage {
 
     def main(args: Array[String]): Unit = {
         val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/RecordLinkage/Blocks"
+        val rawBlocks = sc.textFile(dataFolder)
+
+        def isHead(line: String) = line.contains("id_1")
+        val nonHeader = rawBlocks.filter(!isHead(_))
     }
 }
