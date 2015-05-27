@@ -21,6 +21,8 @@ object miniSparkTry {
 
         counts.saveAsTextFile(outputFile)
 
+        println(counts.collectAsMap())
+
         sc.stop()
     }
 }
