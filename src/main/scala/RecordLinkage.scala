@@ -41,5 +41,10 @@ object RecordLinkage {
         val localGrouped = localMDS.groupBy(_.matched)
 
         localGrouped.mapValues(_.length).foreach(println)
+
+        val matchCounts = parsed.map(_.matched).countByValue()
+
+        val matchCountsSeq = matchCounts.toSeq
+        matchCountsSeq.sortBy(_._2).reverse.foreach(println)
     }
 }
