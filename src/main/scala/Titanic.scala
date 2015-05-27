@@ -468,10 +468,10 @@ object Titanic {
 
         val numClasses = 2
         val categoricalFeaturesInfo = Map(0 -> 3, 1 -> 2)  // class and gender are categorical
-        val numTrees = 5000
+        val numTrees = 10
         val featureSubsetStrategy = "auto"
         val impurity = "gini"
-        val maxDepth = 10
+        val maxDepth = 3
         val maxBins = 32
 
         val validationModel = RandomForest.trainClassifier(initialTrainingFeatures, numClasses, categoricalFeaturesInfo,
@@ -487,6 +487,49 @@ object Titanic {
         println("ClassGenderFamilySize Random Forest validation error rate: " + validationError)
         println("ClassGenderFamilySize Random Forest precision: " + validationMetrics.precision)
         println("ClassGenderFamilySize Random Forest recall: " + validationMetrics.recall)
+
+        // train full model
+        val fullModel = RandomForest.trainClassifier(trainingFeatures, numClasses, categoricalFeaturesInfo, numTrees,
+            featureSubsetStrategy, impurity, maxDepth, maxBins)
+
+        // evaluate over test data
+        val RFFullResults = testFeatures.map {
+            case (idInt, fVector) => (idInt, fullModel.predict(fVector).toInt)
+        }.cache()
+
+        // println(outputFolderName + " learned model: " + fullModel.toDebugString)
+        val RFResultsDF = RFFullResults.map(tuple => new TitanicResult(tuple._1, tuple._2)).toDF()
+
+        RFResultsDF.show()
+        RFResultsDF.saveAsCsvFile(resultsFolder + outputFolderName)
+    }
+
+
+    def runGenderClassFareRFModel(): Unit = {
+        val (trainingFeatures, initialTrainingFeatures, validationFeatures, testFeatures) = prepGenderClassFareData()
+        val outputFolderName = "RFGenderClassFareModel"
+
+        val numClasses = 2
+        val categoricalFeaturesInfo = Map(0 -> 3, 1 -> 2)  // class and gender are categorical
+        val numTrees = 10
+        val featureSubsetStrategy = "auto"
+        val impurity = "gini"
+        val maxDepth = 3
+        val maxBins = 32
+
+        val validationModel = RandomForest.trainClassifier(initialTrainingFeatures, numClasses, categoricalFeaturesInfo,
+            numTrees, featureSubsetStrategy, impurity, maxDepth, maxBins)
+
+        val validationResults = validationFeatures.map(point => (validationModel.predict(point.features), point.label))
+
+        val validationError = validationResults.filter(tuple => tuple._1 != tuple._2)
+                .count().toDouble / validationResults.count()
+
+        val validationMetrics = new MulticlassMetrics(validationResults)
+
+        println("ClassGenderFare Random Forest validation error rate: " + validationError)
+        println("ClassGenderFare Random Forest precision: " + validationMetrics.precision)
+        println("ClassGenderFare Random Forest recall: " + validationMetrics.recall)
 
         // train full model
         val fullModel = RandomForest.trainClassifier(trainingFeatures, numClasses, categoricalFeaturesInfo, numTrees,
@@ -602,6 +645,8 @@ object Titanic {
 
 //        runGenderClassFamilyDTModel()
 
-        runGenderClassFamilyRandomForestModel()
+//        runGenderClassFamilyRandomForestModel()
+
+        runGenderClassFareRFModel()
     }
 }
