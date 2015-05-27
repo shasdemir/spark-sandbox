@@ -16,21 +16,30 @@ object RecordLinkage {
         val line = head(5)
 
         def isHeader(line: String) = line.contains("id_1")
-        val nonHeader = rawBlocks.filter(!isHeader(_))
+        val noHeader = rawBlocks.filter(!isHeader(_))
 
         def toDoubleNaN(s: String) = if (s == "?") Double.NaN else s.toDouble
 
-        def parseLine(line: String): (Int, Int, Array[Double], Boolean) = {
+        case class MatchData(id1: Int, id2: Int, scores: Array[Double], matched: Boolean)
+
+        def parseLine(line: String): MatchData = {
             val pieces = line.split(",")
             val (id1, id2) = (pieces(0).toInt, pieces(1).toInt)
             val matched = pieces(11).toBoolean
             val rawScores = pieces.slice(2, 11)
             val scores = rawScores.map(toDoubleNaN)
 
-            (id1, id2, scores, matched)
+            MatchData(id1, id2, scores, matched)
         }
 
-        val tup = parseLine(line)
+        val md = parseLine(line)
 
+        val localMDS = head.filter(!isHeader(_)).map(parseLine)
+        val parsed = noHeader.map(parseLine).cache()
+        // data load done
+
+        val localGrouped = localMDS.groupBy(_.matched)
+
+        localGrouped.mapValues(_.length).foreach(println)
     }
 }
