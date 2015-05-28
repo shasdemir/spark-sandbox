@@ -25,7 +25,9 @@ class NAStatCounter extends Serializable {
 
 object NAStatCounter extends Serializable {
     def apply(x: Double) = new NAStatCounter().add(x)
+}
 
+object StatsWM extends Serializable {
     def statsWithMissing(dataRDD: RDD[Array[Double]]): Array[NAStatCounter] = {
         val naStats = dataRDD.mapPartitions((iter: Iterator[Array[Double]]) => {
             val nas: Array[NAStatCounter] = iter.next().map(NAStatCounter(_))

@@ -1,8 +1,11 @@
 import org.apache.spark.{SparkContext, SparkConf}
-import NAStatCounter.statsWithMissing
+import StatsWM.statsWithMissing
+
+case class MatchData(id1: Int, id2: Int, scores: Array[Double], matched: Boolean)
+case class Scored(md: MatchData, score: Double)
 
 object RecordLinkage {
-    val conf = new SparkConf().setMaster("local[*]").setAppName("RecordLinkage")
+    val conf = new SparkConf().setMaster("local[*]").setAppName("RecordLinkage") //.set("spark.driver.memory", "12g")
     val sc = new SparkContext(conf)
 
     def main(args: Array[String]): Unit = {
@@ -15,8 +18,6 @@ object RecordLinkage {
         val noHeader = rawBlocks.filter(!isHeader(_))
 
         def toDoubleNaN(s: String) = if (s == "?") Double.NaN else s.toDouble
-
-        case class MatchData(id1: Int, id2: Int, scores: Array[Double], matched: Boolean)
 
         def parseLine(line: String): MatchData = {
             val pieces = line.split(",")
@@ -34,12 +35,12 @@ object RecordLinkage {
         // data load done
 
         val localGrouped = localMDS.groupBy(_.matched)
-        localGrouped.mapValues(_.length).foreach(println)
+        //localGrouped.mapValues(_.length).foreach(println)
 
         // histogram
         val matchCounts = parsed.map(_.matched).countByValue()
-        val matchCountsSeq = matchCounts.toSeq
-        matchCountsSeq.sortBy(_._2).reverse.foreach(println)
+        //val matchCountsSeq = matchCounts.toSeq
+        //matchCountsSeq.sortBy(_._2).reverse.foreach(println)
 
         // summary statistics for continuous variables
         //parsed.map(_.scores(0)).filter(!_.isNaN).stats()
@@ -56,5 +57,16 @@ object RecordLinkage {
         statsM.zip(statsN).zip(0 until 9).map { case ((m, n), fNo) =>
             ((m.missing + n.missing, m.stats.mean - n.stats.mean), fNo)
         }.foreach(println)
+
+        // scoring model:
+        def naZero(d: Double) = if(d.isNaN) 0.0 else d
+
+        val ct = parsed.map(md => {
+            val score = Array(2, 5, 6, 7 ,8).map(i => naZero(md.scores(i))).sum
+            Scored(md, score)
+        })
+
+        ct.filter(s => s.score >= 4.0).map(s => s.md.matched).countByValue()
+        ct.filter(s => s.score >= 2.0).map(s => s.md.matched).countByValue()
     }
 }
