@@ -59,7 +59,7 @@ object RecordLinkage {
         }.foreach(println)
 
         // scoring model:
-        def naZero(d: Double) = if(d.isNaN) 0.0 else d
+        def naZero(d: Double) = if (d.isNaN) 0.0 else d
 
         val ct = parsed.map(md => {
             val score = Array(2, 5, 6, 7 ,8).map(i => naZero(md.scores(i))).sum
