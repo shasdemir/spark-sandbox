@@ -1,11 +1,9 @@
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkContext, SparkConf}
+import NAStatCounter.statsWithMissing
 
 object RecordLinkage {
     val conf = new SparkConf().setMaster("local[*]").setAppName("RecordLinkage")
     val sc = new SparkContext(conf)
-    val sqlContext = new SQLContext(sc)
-    import sqlContext.implicits._
 
     def main(args: Array[String]): Unit = {
         val dataFolder = "/Users/sukruhasdemir/Repos/Courses/spark-sandbox/data/RecordLinkage/Blocks"
@@ -46,10 +44,17 @@ object RecordLinkage {
         // summary statistics for continuous variables
         //parsed.map(_.scores(0)).filter(!_.isNaN).stats()
         // use NAStatCounter
-        val nasRDD = parsed.map(_.scores.map(NAStatCounter(_)))
+//        val nasRDD = parsed.map(_.scores.map(NAStatCounter(_)))
+//        val reduced = nasRDD.reduce((n1, n2) => {
+//            n1.zip(n2).map { case (a, b) => a merge b }
+//        })
 
-        val reduced = nasRDD.reduce((n1, n2) => {
-            n1.zip(n2).map { case (a, b) => a merge b }
-        })
+        // more efficient implementation of NAStats using NAStatCounter.statsWithMissing:
+        val statsM = statsWithMissing(parsed.filter(_.matched).map(_.scores))
+        val statsN = statsWithMissing(parsed.filter(!_.matched).map(_.scores))
+
+        statsM.zip(statsN).zip(0 until 9).map { case ((m, n), fNo) =>
+            ((m.missing + n.missing, m.stats.mean - n.stats.mean), fNo)
+        }.foreach(println)
     }
 }
