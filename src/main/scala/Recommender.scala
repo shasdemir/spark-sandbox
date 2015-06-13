@@ -3,6 +3,7 @@
  */
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.mllib.recommendation._
 
 object Recommender {
     val conf = new SparkConf().setMaster("local[*]").setAppName("Recommender").set("spark.driver.memory", "8g")
@@ -46,6 +47,13 @@ object Recommender {
     def main(Args: Array[String]): Unit = {
         val (rawUserArtistData, artistByID, artistAlias) = importData()
 
+        // build the first model
+        val bArtistAlias = sc.broadcast(artistAlias)
 
+        val trainData = rawUserArtistData.map { line =>
+            val (userID, artistID, count) = line.split(" ").map(_.toInt)
+            val finalArtistID = bArtistAlias.value.getOrElse(artistID, artistID)
+            Rating(userID, finalArtistID, count)
+        }.cache()
     }
 }
