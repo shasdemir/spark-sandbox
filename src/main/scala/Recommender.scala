@@ -13,12 +13,11 @@ object Recommender {
     val artistDataFile = dataLocation + "artist_data.txt"
     val artistAliasFile = dataLocation + "artist_alias.txt"
 
-    def main(Args: Array[String]): Unit = {
+    def importData(): (RDD[String], RDD[(Int, String)], scala.collection.Map[Int, Int]) = {  // whatever
         val rawUserArtistData = sc.textFile(userArtistDataFile)
         // rawUserArtistData.map(_.split(" ")(0).toDouble).stats
 
         val rawArtistData = sc.textFile(artistDataFile)
-
         val artistByID = rawArtistData.flatMap { line =>
             val (id, name) = line.span(_ != '\t')
             if (name.isEmpty) {
@@ -33,7 +32,6 @@ object Recommender {
         }
 
         val rawArtistAlias = sc.textFile(artistAliasFile)
-
         val artistAlias = rawArtistAlias.flatMap { line =>
             val tokens = line.split('\t')
             if (tokens(0).isEmpty)
@@ -41,5 +39,13 @@ object Recommender {
             else
                 Some((tokens(0).toInt, tokens(1).toInt))
         }.collectAsMap()
+
+        (rawUserArtistData, artistByID, artistAlias)
+    }
+
+    def main(Args: Array[String]): Unit = {
+        val (rawUserArtistData, artistByID, artistAlias) = importData()
+
+
     }
 }
