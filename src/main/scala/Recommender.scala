@@ -44,6 +44,10 @@ object Recommender {
         (rawUserArtistData, artistByID, artistAlias)
     }
 
+    def spotCheckUser(userID: Int): Unit = {
+        
+    }
+
     def main(Args: Array[String]): Unit = {
         val (rawUserArtistData, artistByID, artistAlias) = importData()
 
@@ -51,9 +55,14 @@ object Recommender {
         val bArtistAlias = sc.broadcast(artistAlias)
 
         val trainData = rawUserArtistData.map { line =>
-            val (userID, artistID, count) = line.split(" ").map(_.toInt)
+            val Array(userID, artistID, count) = line.split(" ").map(_.toInt)
             val finalArtistID = bArtistAlias.value.getOrElse(artistID, artistID)
             Rating(userID, finalArtistID, count)
         }.cache()
+
+        val model = ALS.trainImplicit(trainData, 10, 5, 0.01, 1.0)
+
+        // see a feature vector
+        model.userFeatures.mapValues(_.mkString(", ")).first()
     }
 }
