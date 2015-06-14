@@ -44,8 +44,26 @@ object Recommender {
         (rawUserArtistData, artistByID, artistAlias)
     }
 
-    def spotCheckUser(userID: Int): Unit = {
-        
+    def spotCheckUser(userid: Int = 2093760, model: MatrixFactorizationModel, rawUserArtistData: RDD[String],
+                      artistByID: RDD[(Int, String)]): Unit = {
+
+        val rawArtistsForUser = rawUserArtistData
+                .map(_.split(" "))
+                .filter { case Array(user, _, _) => user.toInt == userid }
+
+        val existingProducts = rawArtistsForUser
+                .map { case Array(_, artist, _) => artist.toInt }
+                .collect().toSet
+
+        println("User " + userid + " interacted with items:")
+        artistByID.filter { case (id, name) => existingProducts.contains(id) }.values.collect().foreach(println)
+
+        val recommendations = model.recommendProducts(2093760, 5)
+        recommendations foreach println
+
+        val recommendedProductIDs = recommendations.map(_.product).toSet
+
+        artistByID.filter { case (id, name) => recommendedProductIDs.contains(id) }.values.collect().foreach(println)
     }
 
     def main(Args: Array[String]): Unit = {
@@ -63,6 +81,9 @@ object Recommender {
         val model = ALS.trainImplicit(trainData, 10, 5, 0.01, 1.0)
 
         // see a feature vector
-        model.userFeatures.mapValues(_.mkString(", ")).first()
+        // model.userFeatures.mapValues(_.mkString(", ")).first()
+
+        spotCheckUser(userid=2093760, model=model, rawUserArtistData=rawUserArtistData, artistByID=artistByID)
+
     }
 }
