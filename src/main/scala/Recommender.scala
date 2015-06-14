@@ -6,6 +6,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.recommendation._
+import org.apache.spark.mllib.util.MLUtils.kFold
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -146,6 +147,24 @@ object Recommender {
         }
     }
 
+    def crossValidation(allData: RDD[Rating], bAllItemIDs: Broadcast[Array[Int]], numFolds: Int, seed: Int ): Double = {
+
+        val cvDataSets = kFold(rdd=allData, numFolds=numFolds, seed=seed)
+
+        // cache data sets
+        for (tup <- cvDataSets) {
+            tup._1.cache()
+            tup._2.cache()
+        }
+
+        val cvAUCs = cvDataSets.map { case (cvTrainingData, cvValidationData) =>
+            val cvModel = ALS.trainImplicit(cvTrainingData, 10, 5, 0.01, 1.0)
+            areaUnderCurve(cvValidationData, bAllItemIDs, cvModel.predict)
+        }
+
+        cvAUCs.sum / numFolds
+    }
+
     def main(Args: Array[String]): Unit = {
         val (rawUserArtistData, artistByID, artistAlias) = importData()
 
@@ -172,6 +191,10 @@ object Recommender {
 
         val model = ALS.trainImplicit(trainData, 10, 5, 0.01, 1.0)
         val auc = areaUnderCurve(cvData, bAllItemIDs, model.predict) // 0.9659313568834662
+        println("AUC is: " + auc)
 
+        // try with 10-fold CV
+        val CVAUC = crossValidation(allData = allData, bAllItemIDs=bAllItemIDs, numFolds=10, seed=500)
+        println("10-fold CV meanAUCs: " + CVAUC)  // 0.9657541401455754
     }
 }
