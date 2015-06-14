@@ -147,6 +147,20 @@ object Recommender {
         }
     }
 
+    def predictMostListened(sc: SparkContext, train: RDD[Rating])(allData: RDD[(Int, Int)]) = {
+        val bListenCount = sc.broadcast(
+            train.map(r => (r.product, r.rating))
+                 .reduceByKey(_ + _).collectAsMap()
+        )
+        allData.map { case (user, product) =>
+            Rating(
+                user,
+                product,
+                bListenCount.value.getOrElse(product, 0.0)
+            )
+        }
+    }
+
     def crossValidation(allData: RDD[Rating], bAllItemIDs: Broadcast[Array[Int]], numFolds: Int, seed: Int ): Double = {
 
         val cvDataSets = kFold(rdd=allData, numFolds=numFolds, seed=seed)
@@ -196,5 +210,22 @@ object Recommender {
         // try with 10-fold CV
         val CVAUC = crossValidation(allData = allData, bAllItemIDs=bAllItemIDs, numFolds=10, seed=500)
         println("10-fold CV meanAUCs: " + CVAUC)  // 0.9657541401455754
+
+        // how does the dummy model do?
+        val mostListenedAUC = areaUnderCurve(cvData, bAllItemIDs, predictMostListened(sc, trainData))
+        println("Dummy model AUC: " + mostListenedAUC)  // 0.9399350367758861
+
+        // grid search for hyperparameters
+        val evaluations =
+            for {rank <- Array(10, 50)
+                 lambda <- Array(1.0, 0.0001)
+                 alpha <- Array(1.0, 40.0)}
+            yield {
+                val gsModel = ALS.trainImplicit(trainData, rank, 10, lambda, alpha)
+                val gsAuc = areaUnderCurve(cvData, bAllItemIDs, gsModel.predict)
+                ((rank, lambda, alpha), gsAuc)
+            }
+        println("Grid search for hyperparameters: ")
+        evaluations.sortBy(_._2).reverse.foreach(println)
     }
 }
