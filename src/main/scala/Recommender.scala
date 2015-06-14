@@ -20,7 +20,7 @@ object Recommender {
     val artistDataFile = dataLocation + "artist_data.txt"
     val artistAliasFile = dataLocation + "artist_alias.txt"
 
-    def importData(): (RDD[String], RDD[(Int, String)], scala.collection.Map[Int, Int]) = {  // whatever
+    def importData(): (RDD[String], RDD[(Int, String)], Map[Int, Int]) = {  // whatever
         val rawUserArtistData = sc.textFile(userArtistDataFile)
         // rawUserArtistData.map(_.split(" ")(0).toDouble).stats
 
@@ -45,7 +45,7 @@ object Recommender {
                 None
             else
                 Some((tokens(0).toInt, tokens(1).toInt))
-        }.collectAsMap()
+        }.collectAsMap().toArray.toMap  // to get immutable map
 
         (rawUserArtistData, artistByID, artistAlias)
     }
@@ -64,7 +64,7 @@ object Recommender {
         println("User " + userid + " interacted with items:")
         artistByID.filter { case (id, name) => existingProducts.contains(id) }.values.collect().foreach(println)
 
-        val recommendations = model.recommendProducts(2093760, 5)
+        val recommendations = model.recommendProducts(userid, 5)
         recommendations foreach println
 
         val recommendedProductIDs = recommendations.map(_.product).toSet
@@ -72,10 +72,8 @@ object Recommender {
         artistByID.filter { case (id, name) => recommendedProductIDs.contains(id) }.values.collect().foreach(println)
     }
 
-    def areaUnderCurve(
-                              positiveData: RDD[Rating],
-                              bAllItemIDs: Broadcast[Array[Int]],
-                              predictFunction: (RDD[(Int,Int)] => RDD[Rating])) = {
+    def areaUnderCurve(positiveData: RDD[Rating], bAllItemIDs: Broadcast[Array[Int]],
+                       predictFunction: (RDD[(Int,Int)] => RDD[Rating])) = {
         // What this actually computes is AUC, per user. The result is actually something
         // that might be called "mean AUC".
 
@@ -140,9 +138,7 @@ object Recommender {
         }.mean() // Return mean AUC over users
     }
 
-    def buildRatings(
-                            rawUserArtistData: RDD[String],
-                            bArtistAlias: Broadcast[Map[Int,Int]]) = {
+    def buildRatings(rawUserArtistData: RDD[String], bArtistAlias: Broadcast[Map[Int,Int]]) = {
         rawUserArtistData.map { line =>
             val Array(userID, artistID, count) = line.split(' ').map(_.toInt)
             val finalArtistID = bArtistAlias.value.getOrElse(artistID, artistID)
@@ -156,18 +152,26 @@ object Recommender {
         // build the first model
         val bArtistAlias = sc.broadcast(artistAlias)
 
-        val trainData = rawUserArtistData.map { line =>
-            val Array(userID, artistID, count) = line.split(" ").map(_.toInt)
-            val finalArtistID = bArtistAlias.value.getOrElse(artistID, artistID)
-            Rating(userID, finalArtistID, count)
-        }.cache()
+        val fullTrainData = buildRatings(rawUserArtistData, bArtistAlias).cache()
 
-        val model = ALS.trainImplicit(trainData, 10, 5, 0.01, 1.0)
+        val fullModel = ALS.trainImplicit(fullTrainData, 10, 5, 0.01, 1.0)
 
         // see a feature vector
         // model.userFeatures.mapValues(_.mkString(", ")).first()
 
-        spotCheckUser(userid=2093760, model=model, rawUserArtistData=rawUserArtistData, artistByID=artistByID)
+        spotCheckUser(userid=2093760, model=fullModel, rawUserArtistData=rawUserArtistData, artistByID=artistByID)
+
+        // compute AUC
+        val allData = buildRatings(rawUserArtistData, bArtistAlias)
+        val Array(trainData, cvData) = allData.randomSplit(Array(0.9, 0.1))
+        trainData.cache()
+        cvData.cache()
+
+        val allItemIDs = allData.map(_.product).distinct().collect()  // remove duplicates, collect to driver
+        val bAllItemIDs = sc.broadcast(allItemIDs)
+
+        val model = ALS.trainImplicit(trainData, 10, 5, 0.01, 1.0)
+        val auc = areaUnderCurve(cvData, bAllItemIDs, model.predict) // 0.9659313568834662
 
     }
 }
