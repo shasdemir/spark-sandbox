@@ -191,8 +191,8 @@ object Recommender {
 
         // see a feature vector
         // model.userFeatures.mapValues(_.mkString(", ")).first()
-
         spotCheckUser(userid=2093760, model=fullModel, rawUserArtistData=rawUserArtistData, artistByID=artistByID)
+
 
         // compute AUC
         val allData = buildRatings(rawUserArtistData, bArtistAlias)
@@ -207,19 +207,22 @@ object Recommender {
         val auc = areaUnderCurve(cvData, bAllItemIDs, model.predict) // 0.9659313568834662
         println("AUC is: " + auc)
 
+
         // try with 10-fold CV
         val CVAUC = crossValidation(allData = allData, bAllItemIDs=bAllItemIDs, numFolds=10, seed=500)
         println("10-fold CV meanAUCs: " + CVAUC)  // 0.9657541401455754
+
 
         // how does the dummy model do?
         val mostListenedAUC = areaUnderCurve(cvData, bAllItemIDs, predictMostListened(sc, trainData))
         println("Dummy model AUC: " + mostListenedAUC)  // 0.9399350367758861
 
+
         // grid search for hyperparameters
         val evaluations =
-            for {rank <- Array(10, 50)
-                 lambda <- Array(1.0, 0.0001)
-                 alpha <- Array(1.0, 40.0)}
+            for {rank <- Array(5, 10, 50, 100)
+                 lambda <- Array(1.0)
+                 alpha <- Array(40.0)}
             yield {
                 val gsModel = ALS.trainImplicit(trainData, rank, 10, lambda, alpha)
                 val gsAuc = areaUnderCurve(cvData, bAllItemIDs, gsModel.predict)
@@ -227,5 +230,11 @@ object Recommender {
             }
         println("Grid search for hyperparameters: ")
         evaluations.sortBy(_._2).reverse.foreach(println)
+
+
+        // recommend for 100 users
+        val someUsers = allData.map(_.user).distinct().take(100)
+        val someRecommendations = someUsers.map(userID => model.recommendProducts(userID, 5))
+        someRecommendations.map(recs => recs.head.user + " -> " + recs.map(_.product).mkString(", ")).foreach(println)
     }
 }
