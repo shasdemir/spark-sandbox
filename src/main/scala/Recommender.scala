@@ -231,6 +231,11 @@ object Recommender {
         println("Grid search for hyperparameters: ")
         evaluations.sortBy(_._2).reverse.foreach(println)
 
+//        Grid search for hyperparameters:
+//        ((50,1.0,40.0),0.977536352590695)
+//        ((10,1.0,40.0),0.9772693672439144)
+//        ((5,1.0,40.0),0.976267889253131)
+//        ((100,1.0,40.0),0.9760874803573029)
 
         // recommend for 100 users
         val someUsers = allData.map(_.user).distinct().take(100)
