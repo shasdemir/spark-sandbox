@@ -220,8 +220,8 @@ object Recommender {
 
         // grid search for hyperparameters
         val evaluations =
-            for {rank <- Array(7, 50, 100, 200)
-                 lambda <- Array(0.01, 1.0, 10.0, 100.0)
+            for {rank <- Array(300)
+                 lambda <- Array(1000.0)
                  alpha <- Array(40.0)}
             yield {
                 val gsModel = ALS.trainImplicit(trainData, rank, 10, lambda, alpha)
@@ -253,6 +253,8 @@ object Recommender {
 //        ((100,0.01,40.0),0.9740716167047853)
 //        ((200,1.0,40.0),0.9739271417092459)
 //        ((200,0.01,40.0),0.9686929635420999)
+
+//        ((300,1000.0,40.0),0.9511743147820053)
 
         // recommend for 100 users
         val someUsers = allData.map(_.user).distinct().take(100)
